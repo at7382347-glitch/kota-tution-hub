@@ -1,0 +1,24 @@
+/* ── Google Fonts ─────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+@import "tailwindcss";
+
+/* ── Kota Tuition Hub Design Theme ────────────────────────────── */
+@theme {
+  /* Custom Colors */
+  --color-sandstone: #F2ECDD;
+  --color-ink: #1F2A44;
+  --color-marigold: #E8A33D;
+  --color-maroon: #9B3922;
+  --color-sage: #5B7553;
+
+  /* Font Families */
+  --font-display: "Zilla Slab", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+/* Set Inter as the default body font */
+body {
+  font-family: var(--font-body);
+}

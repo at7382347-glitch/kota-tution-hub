@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /teacher/dashboard
+Disallow: /student/dashboard
+Disallow: /admin/login
+Disallow: /admin/dashboard
+
+Sitemap: https://kotatuitionhub.com/sitemap.xml
