@@ -34,6 +34,8 @@ app.use('/uploads', express.static(uploadsDir));
 connectDB();
 
 // Routes
+app.get('/', (req, res) => res.status(200).send('Server is awake!'));
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
