@@ -25,19 +25,31 @@ function BrowseTeachers() {
   // Fetch all teachers on mount
   useEffect(() => {
     async function fetchTeachers() {
-      try {
-        const res = await fetch(`${API_BASE}/api/users/teachers`);
-        if (res.ok) {
-          const data = await res.json();
-          setTeachers(data);
-        } else {
-          setError('Failed to load teachers.');
+      let attempts = 3; // 1 initial attempt + 2 retries
+      
+      while (attempts > 0) {
+        try {
+          const res = await fetch(`${API_BASE}/api/users/teachers`);
+          if (res.ok) {
+            const data = await res.json();
+            setTeachers(data);
+            setLoading(false);
+            return; // Success, exit the function
+          }
+          throw new Error('Failed to load teachers.');
+        } catch (err) {
+          console.error(`Fetch teachers error (attempts left: ${attempts - 1}):`, err);
+          attempts--;
+          
+          if (attempts > 0) {
+            // Wait 3 seconds before next retry
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          } else {
+            // All attempts failed, show error
+            setError('Network error. Please check your connection.');
+            setLoading(false);
+          }
         }
-      } catch (err) {
-        console.error('Fetch teachers error:', err);
-        setError('Network error. Please check your connection.');
-      } finally {
-        setLoading(false);
       }
     }
     fetchTeachers();
