@@ -20,7 +20,7 @@ if (!fs.existsSync(uploadsDir)) {
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  // Add future production frontend URL here (e.g., Netlify URL)
+  'https://kota-tution-hub.vercel.app'
 ];
 
 app.use(cors({
