@@ -55,7 +55,7 @@ function Login() {
 
       console.log('Syncing user to backend:', payload);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/sync`, {
+      const res = await fetch(`${import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL}/api/users/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

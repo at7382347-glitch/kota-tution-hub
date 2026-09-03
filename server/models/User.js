@@ -46,6 +46,23 @@ const teacherProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  reviews: [
+    {
+      studentId: String,
+      studentName: String,
+      rating: { type: Number, required: true, min: 1, max: 5 },
+      comment: String,
+      date: { type: Date, default: Date.now },
+    },
+  ],
+  averageRating: {
+    type: Number,
+    default: 0,
+  },
+  totalRatings: {
+    type: Number,
+    default: 0,
+  },
 }, { _id: false });
 
 const studentRequirementSchema = new mongoose.Schema({

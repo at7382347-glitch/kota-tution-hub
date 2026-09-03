@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 
 function Home() {
   return (
-    <div className="bg-sandstone min-h-screen">
+    <div className="bg-sandstone min-h-screen overflow-x-hidden">
       <Helmet>
         <title>Kota Tuition Hub - Find the Best Home Tutors in Kota, Rajasthan</title>
         <meta name="description" content="Kota Tuition Hub — Find the best home tutors in Kota, Rajasthan for IIT-JEE, NEET, and board exam preparation." />
@@ -12,32 +12,39 @@ function Home() {
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_IN" />
       </Helmet>
-      {/* ── Hero Section ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-6 pt-20 pb-28 sm:px-12 lg:px-24">
+      <main>
+        {/* ── Hero Section ─────────────────────────────────────────── */}
+        <section 
+        className="relative overflow-hidden px-4 sm:px-6 md:px-8 lg:px-24 pt-20 pb-28 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop')" }}
+      >
+        {/* Dark overlay for text contrast */}
+        <div className="absolute inset-0 bg-ink/80 sm:bg-ink/70 bg-gradient-to-b from-ink/90 to-ink/60"></div>
+        
         {/* Subtle decorative circle */}
         <div className="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-marigold/10" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-sage/10" />
 
-        <div className="relative mx-auto max-w-4xl text-center">
-          <p className="font-body mb-4 inline-block rounded-full bg-marigold/15 px-4 py-1.5 text-sm font-medium tracking-wide text-ink/70">
+        <div className="relative mx-auto max-w-4xl text-center sm:text-left">
+          <p className="font-body mb-4 inline-block rounded-full bg-marigold/15 border border-marigold/20 px-4 py-1.5 text-sm font-medium tracking-wide text-sandstone/90">
             Connecting Kota's students with verified tutors
           </p>
 
-          <h1 className="font-display text-ink text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
+          <h1 className="font-display text-sandstone text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
             Find the Best Home Tutors
             <span className="block text-marigold">in Kota, Rajasthan</span>
           </h1>
 
-          <p className="font-body text-ink/70 mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg md:text-xl">
+          <p className="font-body text-sandstone/80 mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg md:text-xl">
             Whether you're preparing for IIT-JEE, NEET, or board exams — connect
             with experienced, verified home tutors right in your neighbourhood.
           </p>
 
-          <p className="font-body text-ink/45 mx-auto mt-4 max-w-lg text-sm italic leading-relaxed sm:text-base">
+          <p className="font-body text-sandstone/60 mx-auto mt-4 max-w-lg text-sm italic leading-relaxed sm:text-base">
             Your personal tutor, guiding you one-on-one — because every student learns differently.
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center sm:items-start justify-center sm:justify-start gap-4 sm:flex-row">
             <Link
               to="/browse-teachers"
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-marigold px-8 py-3.5 text-base font-semibold text-ink shadow-lg shadow-marigold/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-marigold/90 hover:shadow-xl hover:shadow-marigold/30 active:translate-y-0 sm:w-auto sm:text-lg"
@@ -49,7 +56,7 @@ function Home() {
             </Link>
             <Link
               to="/login"
-              className="font-body inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/20 px-8 py-3.5 text-base font-semibold text-ink transition-all duration-200 hover:bg-ink/5 hover:border-ink/40 sm:w-auto sm:text-lg"
+              className="font-body inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-sandstone/30 bg-sandstone/5 backdrop-blur-sm px-8 py-3.5 text-base font-semibold text-sandstone transition-all duration-200 hover:bg-sandstone/10 hover:border-sandstone/50 sm:w-auto sm:text-lg"
             >
               I'm a Teacher
             </Link>
@@ -58,7 +65,7 @@ function Home() {
       </section>
 
       {/* ── Trust Banner ─────────────────────────────────────────── */}
-      <section className="border-y border-ink/10 bg-ink/[0.03] px-6 py-8 sm:px-12 lg:px-24">
+      <section className="border-y border-ink/10 bg-ink/[0.03] px-4 sm:px-6 md:px-8 lg:px-24 py-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="font-display text-lg sm:text-xl font-medium text-ink/80">
             A new platform built to connect Kota's students with genuinely verified, experienced tutors.
@@ -67,7 +74,7 @@ function Home() {
       </section>
 
       {/* ── How It Works ─────────────────────────────────────────── */}
-      <section className="px-6 py-20 sm:px-12 lg:px-24">
+      <section className="px-4 sm:px-6 md:px-8 lg:px-24 py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="font-display text-ink text-center text-2xl font-bold sm:text-3xl md:text-4xl">
             How It Works
@@ -76,7 +83,7 @@ function Home() {
             Three simple steps to find your perfect tutor
           </p>
 
-          <div className="mt-14 grid gap-10 sm:grid-cols-3">
+          <div className="mt-14 grid gap-10 grid-cols-1 md:grid-cols-3">
             {[
               {
                 step: '01',
@@ -132,7 +139,7 @@ function Home() {
       </section>
 
       {/* ── Subjects We Cover ────────────────────────────────────── */}
-      <section className="bg-ink/5 border-y border-ink/8 px-6 py-20 sm:px-12 lg:px-24">
+      <section className="bg-ink/5 border-y border-ink/8 px-4 sm:px-6 md:px-8 lg:px-24 py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="font-display text-ink text-center text-2xl font-bold sm:text-3xl md:text-4xl">
             Subjects We Cover
@@ -163,7 +170,7 @@ function Home() {
       </section>
 
       {/* ── Pricing Teaser ───────────────────────────────────────── */}
-      <section className="px-6 py-20 sm:px-12 lg:px-24">
+      <section className="px-4 sm:px-6 md:px-8 lg:px-24 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-ink text-2xl font-bold sm:text-3xl md:text-4xl">
             Affordable &amp; Transparent Pricing
@@ -172,21 +179,22 @@ function Home() {
             No hidden fees. Pay the tutor directly after a free demo class.
           </p>
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+          <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
             {[
-              { price: '₹10,000', duration: '1 hour', period: '/month' },
-              { price: '₹15,000', duration: '1.5 hours', period: '/month' },
-              { price: '₹20,000', duration: '2 hours', period: '/month' },
+              { title: 'Foundation (Class 6-8)', price: 'From ₹6,500', period: '/month', desc: 'Build a strong academic base.' },
+              { title: 'Board Exams (Class 9-12)', price: 'From ₹7,500', period: '/month', desc: 'Score high with expert guidance.' },
+              { title: 'JEE / NEET Prep', price: 'From ₹10,000', period: '/month', desc: 'Advanced coaching & dropper batches.' },
             ].map((tier) => (
               <div
-                key={tier.duration}
-                className="rounded-2xl border border-ink/8 bg-white/60 p-6 backdrop-blur-sm"
+                key={tier.title}
+                className="rounded-2xl border border-ink/8 bg-white/60 p-6 backdrop-blur-sm flex flex-col"
               >
-                <p className="font-body text-sm font-medium text-ink/50">{tier.duration} daily</p>
+                <p className="font-body text-sm font-medium text-ink/50">{tier.title}</p>
                 <p className="font-mono mt-2 text-2xl font-semibold text-ink sm:text-3xl">
                   {tier.price}
                   <span className="text-base font-normal text-ink/40">{tier.period}</span>
                 </p>
+                <p className="font-body mt-2 text-sm text-ink/60">{tier.desc}</p>
               </div>
             ))}
           </div>
@@ -198,7 +206,7 @@ function Home() {
       </section>
 
       {/* ── CTA Banner ───────────────────────────────────────────── */}
-      <section className="px-6 pb-24 sm:px-12 lg:px-24">
+      <section className="px-4 sm:px-6 md:px-8 lg:px-24 pb-24">
         <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-ink to-ink/90 px-6 py-10 text-center sm:px-16 sm:py-14">
           {/* Maroon accent — used sparingly */}
           <div className="pointer-events-none absolute -top-10 right-10 h-32 w-32 rounded-full bg-maroon/20 blur-2xl" />
@@ -240,9 +248,10 @@ function Home() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="bg-ink px-6 py-12 sm:px-12 lg:px-24">
+      <footer className="bg-ink px-4 sm:px-6 md:px-8 lg:px-24 py-12">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-between">
             {/* Left — Brand */}

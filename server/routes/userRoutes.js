@@ -263,6 +263,68 @@ router.get('/teachers/:firebaseUid', async (req, res) => {
   }
 });
 
+// POST /api/users/teachers/:firebaseUid/rate - Rate a teacher
+router.post('/teachers/:firebaseUid/rate', async (req, res) => {
+  try {
+    const { studentId, studentName, rating, comment } = req.body;
+    const teacherUid = req.params.firebaseUid;
+
+    if (!studentId || !rating) {
+      return res.status(400).json({ error: 'Student ID and rating are required.' });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
+    }
+
+    const teacher = await User.findOne({ firebaseUid: teacherUid, role: 'teacher' });
+    if (!teacher || !teacher.teacherProfile) {
+      return res.status(404).json({ error: 'Teacher not found.' });
+    }
+
+    const reviews = teacher.teacherProfile.reviews || [];
+    const existingReviewIndex = reviews.findIndex(r => r.studentId === studentId);
+
+    const newReview = {
+      studentId,
+      studentName: studentName || 'Anonymous',
+      rating: Number(rating),
+      comment: comment || '',
+      date: new Date()
+    };
+
+    if (existingReviewIndex >= 0) {
+      // Overwrite existing review
+      reviews[existingReviewIndex] = newReview;
+    } else {
+      // Add new review
+      reviews.push(newReview);
+    }
+
+    // Recalculate average and total
+    const totalRatings = reviews.length;
+    const sumRatings = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = totalRatings > 0 ? (sumRatings / totalRatings).toFixed(1) : 0;
+
+    teacher.teacherProfile.reviews = reviews;
+    teacher.teacherProfile.totalRatings = totalRatings;
+    teacher.teacherProfile.averageRating = Number(averageRating);
+
+    await teacher.save();
+
+    res.json({
+      message: 'Rating submitted successfully',
+      averageRating: teacher.teacherProfile.averageRating,
+      totalRatings: teacher.teacherProfile.totalRatings,
+      reviews: teacher.teacherProfile.reviews
+    });
+
+  } catch (err) {
+    console.error('Rate teacher error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/users/:firebaseUid - Fetch a user by firebaseUid
 // This generic param route must come AFTER more-specific routes like /:firebaseUid/teacher-profile
 router.get('/:firebaseUid', async (req, res) => {

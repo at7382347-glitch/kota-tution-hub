@@ -3,14 +3,22 @@ import { Link } from 'react-router-dom';
 import { auth } from '../firebase';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 const BUDGET_PACKAGES = [
-  { value: '1hr-10000', label: '1 hour — ₹10000/month' },
-  { value: '1.5hr-15000', label: '1.5 hours — ₹15000/month' },
-  { value: '2hr-20000', label: '2 hours — ₹20000/month' },
+  { value: 'class-6', label: 'Class 6 - ₹6,500/month' },
+  { value: 'class-7', label: 'Class 7 - ₹6,500/month' },
+  { value: 'class-8', label: 'Class 8 - ₹7,500/month' },
+  { value: 'class-9-board', label: 'Class 9 (School/Board) - ₹7,500/month' },
+  { value: 'class-10-board', label: 'Class 10 (School/Board) - ₹8,500/month' },
+  { value: 'class-9-10-jee-neet', label: 'Class 9 & 10 (JEE/NEET Foundation) - ₹10,000/month' },
+  { value: 'class-11-board', label: 'Class 11 (School/Board) - ₹9,500/month' },
+  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹12,000/month' },
+  { value: 'class-12-board', label: 'Class 12 (School/Board) - ₹9,500/month' },
+  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹13,000/month' },
+  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹15,000/month' },
 ];
 
 const initialForm = {
@@ -132,7 +140,7 @@ function StudentDashboard() {
       return;
     }
     if (form.budgetPackages.length === 0) {
-      setMessage({ text: 'Please select at least one budget package.', type: 'error' });
+      setMessage({ text: 'Please select at least one fee package.', type: 'error' });
       return;
     }
     if (!form.area.trim()) {
@@ -232,11 +240,11 @@ function StudentDashboard() {
   const isComplete = req?.isRequirementComplete;
 
   return (
-    <div className="min-h-screen bg-sandstone py-8 px-4">
+    <div className="min-h-screen bg-sandstone py-8 px-4 overflow-x-hidden">
       <Helmet>
         <meta name="robots" content="noindex" />
       </Helmet>
-      <div className="max-w-2xl mx-auto">
+      <main className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-display text-ink text-2xl sm:text-3xl font-bold">Student Dashboard</h1>
@@ -289,9 +297,9 @@ function StudentDashboard() {
               <SummaryField label="Area in Kota" value={req.area} />
               <SummaryField label="Mode" value="Offline Only" />
 
-              {/* Budget Packages */}
+              {/* Fee Packages */}
               <div className="sm:col-span-2">
-                <p className="font-display text-ink/40 text-xs uppercase tracking-wide mb-1">Budget Packages</p>
+                <p className="font-display text-ink/40 text-xs uppercase tracking-wide mb-1">Fee Packages</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(req.budgetPackages || []).map((pkg) => {
                     const match = BUDGET_PACKAGES.find((bp) => bp.value === pkg);
@@ -439,7 +447,7 @@ function StudentDashboard() {
                 value={form.name}
                 onChange={handleChange}
                 placeholder="e.g. Priya Sharma"
-                className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
+                className="w-full rounded-lg border border-ink/15 px-3 py-3 sm:py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
               />
             </div>
 
@@ -460,7 +468,7 @@ function StudentDashboard() {
                   setForm((prev) => ({ ...prev, contactNumber: val }));
                 }}
                 placeholder="e.g. 9876543210"
-                className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
+                className="w-full rounded-lg border border-ink/15 px-3 py-3 sm:py-2 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
               />
               {form.contactNumber && form.contactNumber.length !== 10 && (
                 <p className="text-xs text-marigold mt-1 font-body">{form.contactNumber.length}/10 digits</p>
@@ -476,7 +484,7 @@ function StudentDashboard() {
                 {SUBJECT_OPTIONS.map((sub) => (
                   <label
                     key={sub}
-                    className={`px-3 py-1.5 rounded-full border text-sm cursor-pointer select-none transition-all duration-200 font-body ${
+                    className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-full border text-sm cursor-pointer select-none transition-all duration-200 font-body ${
                       form.subjects.includes(sub)
                         ? 'bg-marigold text-ink border-marigold shadow-sm shadow-marigold/20'
                         : 'bg-white text-ink/60 border-ink/15 hover:border-marigold/50'
@@ -503,7 +511,7 @@ function StudentDashboard() {
                 {CLASS_OPTIONS.map((cls) => (
                   <label
                     key={cls}
-                    className={`px-3 py-1.5 rounded-full border text-sm cursor-pointer select-none transition-all duration-200 font-body ${
+                    className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-full border text-sm cursor-pointer select-none transition-all duration-200 font-body ${
                       form.classLevel === cls
                         ? 'bg-marigold text-ink border-marigold shadow-sm shadow-marigold/20'
                         : 'bg-white text-ink/60 border-ink/15 hover:border-marigold/50'
@@ -523,16 +531,16 @@ function StudentDashboard() {
               </div>
             </fieldset>
 
-            {/* Budget Packages (checkboxes as pill toggles) */}
+            {/* Fee Packages (checkboxes as pill toggles) */}
             <fieldset>
               <legend className="text-sm font-medium text-ink/70 mb-2 font-body">
-                Budget Packages <span className="text-maroon">*</span> <span className="text-ink/30 text-xs">(select one or more)</span>
+                Select Fee Package <span className="text-maroon">*</span> <span className="text-ink/30 text-xs">(select one or more)</span>
               </legend>
               <div className="space-y-2">
                 {BUDGET_PACKAGES.map((pkg) => (
                   <label
                     key={pkg.value}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
+                    className={`flex items-center gap-3 p-4 sm:p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
                       form.budgetPackages.includes(pkg.value)
                         ? 'bg-marigold/10 border-marigold/40'
                         : 'bg-white border-ink/10 hover:border-marigold/30'
@@ -540,7 +548,7 @@ function StudentDashboard() {
                   >
                     <input
                       type="checkbox"
-                      className="accent-marigold w-4 h-4"
+                      className="accent-marigold w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0"
                       checked={form.budgetPackages.includes(pkg.value)}
                       onChange={() => handleBudgetToggle(pkg.value)}
                     />
@@ -560,7 +568,7 @@ function StudentDashboard() {
                 value={form.area}
                 onChange={handleChange}
                 placeholder="e.g. Talwandi, Kota"
-                className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
+                className="w-full rounded-lg border border-ink/15 px-3 py-3 sm:py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
               />
             </div>
 
@@ -588,7 +596,7 @@ function StudentDashboard() {
                 value={form.additionalNotes}
                 onChange={handleChange}
                 placeholder="Any specific needs, preferred timings, etc."
-                className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent resize-none"
+                className="w-full rounded-lg border border-ink/15 px-3 py-3 sm:py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent resize-none"
               />
             </div>
 
@@ -613,7 +621,7 @@ function StudentDashboard() {
             </div>
           </form>
         )}
-      </div>
+      </main>
     </div>
   );
 }

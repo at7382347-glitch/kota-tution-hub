@@ -2,17 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { auth } from '../firebase';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 const MODE_OPTIONS = ['offline', 'both'];
 
-const FEE_PACKAGES = [
-  { id: '1hr-10000', label: '1 hour - ₹10000/month' },
-  { id: '1.5hr-15000', label: '1.5 hours - ₹15000/month' },
-  { id: '2hr-20000', label: '2 hours - ₹20000/month' },
-];
 
 const initialForm = {
   name: '',
@@ -21,7 +16,6 @@ const initialForm = {
   classLevels: [],
   qualification: '',
   experience: '',
-  feePackages: [],
   area: '',
   mode: 'offline',
   bio: '',
@@ -87,7 +81,6 @@ function TeacherDashboard() {
               classLevels: data.teacherProfile.classLevels || [],
               qualification: data.teacherProfile.qualification || '',
               experience: data.teacherProfile.experience || '',
-              feePackages: data.teacherProfile.feePackages || [],
               area: data.teacherProfile.area || '',
               mode: data.teacherProfile.mode || 'offline',
               bio: data.teacherProfile.bio || '',
@@ -169,10 +162,7 @@ function TeacherDashboard() {
       setMessage({ text: 'Please enter your experience (0 if none).', type: 'error' });
       return;
     }
-    if (form.feePackages.length === 0) {
-      setMessage({ text: 'Please select at least one fee package.', type: 'error' });
-      return;
-    }
+
     if (!form.area.trim()) {
       setMessage({ text: 'Please enter your area in Kota.', type: 'error' });
       return;
@@ -183,7 +173,6 @@ function TeacherDashboard() {
     }
 
     // Validate photo: required for first-time, optional when editing
-    const isEditing = user?.teacherProfile?.isProfileComplete;
     const hasExistingPhoto = !!user?.teacherProfile?.profilePhoto;
     if (!photoFile && !hasExistingPhoto) {
       setMessage({ text: 'Please upload a profile photo.', type: 'error' });
@@ -208,7 +197,6 @@ function TeacherDashboard() {
       formData.append('classLevels', JSON.stringify(form.classLevels));
       formData.append('qualification', form.qualification);
       formData.append('experience', String(Number(form.experience) || 0));
-      formData.append('feePackages', JSON.stringify(form.feePackages));
       formData.append('area', form.area);
       formData.append('mode', form.mode);
       formData.append('bio', form.bio);
@@ -321,7 +309,20 @@ function TeacherDashboard() {
 
             {photoPreview && (
               <div className="mb-5 flex justify-center">
-                <img src={photoPreview} alt="Profile" className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-lg object-cover border-2 border-marigold/30" />
+                <img 
+                  src={photoPreview} 
+                  onError={(e) => {
+                    const profilePhoto = profile?.profilePhoto;
+                    const prodUrl = profilePhoto ? `${import.meta.env.VITE_API_URL}${profilePhoto}` : null;
+                    if (import.meta.env.DEV && prodUrl && e.target.src !== prodUrl && !profilePhoto.startsWith('blob:') && !profilePhoto.startsWith('http')) {
+                      e.target.src = prodUrl;
+                    } else {
+                      e.target.style.display = 'none';
+                    }
+                  }}
+                  alt="Profile" 
+                  className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-lg object-cover border-2 border-marigold/30" 
+                />
               </div>
             )}
 
@@ -333,20 +334,7 @@ function TeacherDashboard() {
               <ProfileField label="Class Levels" value={profile.classLevels?.join(', ')} />
               <ProfileField label="Qualification" value={profile.qualification} />
               <ProfileField label="Experience" value={`${profile.experience} years`} />
-              <div className="sm:col-span-2">
-                <p className="font-display text-ink/40 text-xs uppercase tracking-wide mb-1">Fee Packages</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(profile.feePackages || []).map((pkg) => {
-                    const match = FEE_PACKAGES.find((f) => f.id === pkg);
-                    return (
-                      <span key={pkg} className="inline-block bg-marigold/10 text-marigold text-xs px-2 py-1 rounded-full font-mono font-medium">
-                        {match ? match.label : pkg}
-                      </span>
-                    );
-                  })}
-                  {(!profile.feePackages || profile.feePackages.length === 0) && <span className="text-ink/30">—</span>}
-                </div>
-              </div>
+
               <ProfileField label="Area" value={profile.area} />
               <ProfileField label="Mode" value={profile.mode} />
               <div className="sm:col-span-2">
@@ -601,25 +589,6 @@ function TeacherDashboard() {
               <input id="experience" name="experience" type="number" min="0" value={form.experience} onChange={handleChange} placeholder="e.g. 5" className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent" />
             </div>
 
-            {/* Fee Packages */}
-            <fieldset>
-              <legend className="text-sm font-medium text-ink/70 mb-2 font-body">Fee Packages <span className="text-maroon">*</span></legend>
-              <div className="space-y-2">
-                {FEE_PACKAGES.map((pkg) => (
-                  <label
-                    key={pkg.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
-                      form.feePackages.includes(pkg.id)
-                        ? 'bg-marigold/10 border-marigold/40'
-                        : 'bg-white border-ink/10 hover:border-marigold/30'
-                    }`}
-                  >
-                    <input type="checkbox" className="accent-marigold w-4 h-4" checked={form.feePackages.includes(pkg.id)} onChange={() => handleCheckbox('feePackages', pkg.id)} />
-                    <span className="text-sm font-mono text-ink">{pkg.label}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
 
             {/* Area */}
             <div>

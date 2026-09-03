@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
@@ -208,6 +208,8 @@ function BrowseTeachers() {
 
 /* ─── Teacher Card Component ─── */
 function TeacherCard({ teacher }) {
+  const [imageError, setImageError] = useState(false);
+  
   const p = teacher.teacherProfile;
   const photoUrl = p.profilePhoto
     ? `${API_BASE}${p.profilePhoto}`
@@ -221,9 +223,17 @@ function TeacherCard({ teacher }) {
       {/* Top section: photo + basic info */}
       <div className="p-4 sm:p-5 flex gap-4">
         {/* Photo */}
-        {photoUrl ? (
+        {photoUrl && !imageError ? (
           <img
             src={photoUrl}
+            onError={(e) => {
+              const prodUrl = `${import.meta.env.VITE_API_URL}${p.profilePhoto}`;
+              if (import.meta.env.DEV && e.target.src !== prodUrl && p.profilePhoto && !p.profilePhoto.startsWith('http')) {
+                e.target.src = prodUrl;
+              } else {
+                setImageError(true);
+              }
+            }}
             alt={`${teacher.name || 'Verified teacher'}, ${p?.subjects?.[0] || 'expert'} tutor in Kota`}
             className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl object-cover border border-ink/10 flex-shrink-0"
           />

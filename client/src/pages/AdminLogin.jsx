@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 function AdminLogin() {
   const [password, setPassword] = useState('');

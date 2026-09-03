@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 const FEE_PACKAGES = {
   '1hr-10000': '1 hr — ₹10,000/mo',
@@ -500,7 +500,7 @@ function AdminDashboard() {
                   const p = t.teacherProfile || {};
                   const photoUrl = p.profilePhoto ? `${API_BASE}${p.profilePhoto}` : null;
                   return (
-                      <div className="relative bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-ink/8 p-5 group">
+                      <div key={t.firebaseUid || t._id} className="relative bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-ink/8 p-5 group">
                         {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteUser(t.firebaseUid, t.name || 'this teacher', 'teacher')}
