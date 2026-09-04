@@ -8,17 +8,17 @@ const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 const BUDGET_PACKAGES = [
-  { value: 'class-6', label: 'Class 6 - ₹6,500/month' },
-  { value: 'class-7', label: 'Class 7 - ₹6,500/month' },
-  { value: 'class-8', label: 'Class 8 - ₹7,500/month' },
-  { value: 'class-9-board', label: 'Class 9 (School/Board) - ₹7,500/month' },
-  { value: 'class-10-board', label: 'Class 10 (School/Board) - ₹8,500/month' },
-  { value: 'class-9-10-jee-neet', label: 'Class 9 & 10 (JEE/NEET Foundation) - ₹10,000/month' },
-  { value: 'class-11-board', label: 'Class 11 (School/Board) - ₹9,500/month' },
-  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹12,000/month' },
-  { value: 'class-12-board', label: 'Class 12 (School/Board) - ₹9,500/month' },
-  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹13,000/month' },
-  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹15,000/month' },
+  { value: 'class-6', label: 'Class 6 - ₹6,500/month (1 hour/day)' },
+  { value: 'class-7', label: 'Class 7 - ₹6,500/month (1 hour/day)' },
+  { value: 'class-8', label: 'Class 8 - ₹7,500/month (1 hour/day)' },
+  { value: 'class-9-board', label: 'Class 9 (School/Board) - ₹7,500/month (1 hour/day)' },
+  { value: 'class-10-board', label: 'Class 10 (School/Board) - ₹8,500/month (1 hour/day)' },
+  { value: 'class-9-10-jee-neet', label: 'Class 9 & 10 (JEE/NEET Foundation) - ₹9,000/month (1 hour/day)' },
+  { value: 'class-11-board', label: 'Class 11 (School/Board) - ₹9,500/month (1 hour/day)' },
+  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹10,000/month (1 hour/day)' },
+  { value: 'class-12-board', label: 'Class 12 (School/Board) - ₹9,500/month (1 hour/day)' },
+  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹10,000/month (1 hour/day)' },
+  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹10,000/month (1 hour/day)' },
 ];
 
 const initialForm = {
@@ -540,19 +540,21 @@ function StudentDashboard() {
                 {BUDGET_PACKAGES.map((pkg) => (
                   <label
                     key={pkg.value}
-                    className={`flex items-center gap-3 p-4 sm:p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
+                    htmlFor={`package-${pkg.value}`}
+                    className={`flex items-start gap-3 p-4 sm:p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
                       form.budgetPackages.includes(pkg.value)
                         ? 'bg-marigold/10 border-marigold/40'
                         : 'bg-white border-ink/10 hover:border-marigold/30'
                     }`}
                   >
                     <input
+                      id={`package-${pkg.value}`}
                       type="checkbox"
-                      className="accent-marigold w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0"
+                      className="accent-marigold w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5"
                       checked={form.budgetPackages.includes(pkg.value)}
                       onChange={() => handleBudgetToggle(pkg.value)}
                     />
-                    <span className="text-sm font-mono text-ink">{pkg.label}</span>
+                    <span className="text-sm font-mono text-ink whitespace-normal break-words">{pkg.label}</span>
                   </label>
                 ))}
               </div>

@@ -183,15 +183,15 @@ function Home() {
             {[
               { title: 'Foundation (Class 6-8)', price: 'From ₹6,500', period: '/month', desc: 'Build a strong academic base.' },
               { title: 'Board Exams (Class 9-12)', price: 'From ₹7,500', period: '/month', desc: 'Score high with expert guidance.' },
-              { title: 'JEE / NEET Prep', price: 'From ₹10,000', period: '/month', desc: 'Advanced coaching & dropper batches.' },
+              { title: 'JEE / NEET Prep', price: 'From ₹9,000', period: '/month', desc: 'Advanced coaching & dropper batches.' },
             ].map((tier) => (
               <div
                 key={tier.title}
                 className="rounded-2xl border border-ink/8 bg-white/60 p-6 backdrop-blur-sm flex flex-col"
               >
-                <p className="font-body text-sm font-medium text-ink/50">{tier.title}</p>
-                <p className="font-mono mt-2 text-2xl font-semibold text-ink sm:text-3xl">
-                  {tier.price}
+                <h3 className="font-body text-sm font-medium text-ink/50">{tier.title}</h3>
+                <p className="font-mono mt-2 text-2xl font-semibold text-ink sm:text-3xl flex flex-wrap items-baseline gap-x-1">
+                  <span>{tier.price}</span>
                   <span className="text-base font-normal text-ink/40">{tier.period}</span>
                 </p>
                 <p className="font-body mt-2 text-sm text-ink/60">{tier.desc}</p>
@@ -225,24 +225,26 @@ function Home() {
             >
               Get Started — It's Free
             </Link>
-            <div className="flex flex-col gap-2 sm:gap-1 mt-2 sm:mt-0 sm:ml-4">
-              <a
-                href="tel:+916206105858"
-                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-base text-sandstone/70 transition-colors hover:text-marigold"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                Ankur: +91 6206105858
-              </a>
+            <div className="flex flex-col gap-y-3 sm:gap-y-1 mt-4 sm:mt-0 sm:ml-4 w-full sm:w-auto">
               <a
                 href="tel:+919536783342"
-                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-base text-sandstone/70 transition-colors hover:text-marigold"
+                aria-label="Call Ankur"
+                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-sm sm:text-base text-sandstone/70 transition-colors hover:text-marigold"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
-                Sanskar: +91 9536783342
+                Ankur: +91 9536783342
+              </a>
+              <a
+                href="tel:+916206105858"
+                aria-label="Call Sanskar"
+                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-sm sm:text-base text-sandstone/70 transition-colors hover:text-marigold"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+                Sanskar: +91 6206105858
               </a>
             </div>
           </div>
@@ -269,14 +271,14 @@ function Home() {
               <p className="font-body text-xs font-medium uppercase tracking-wider text-sandstone/40">
                 For any queries
               </p>
-              <div className="mt-2 flex flex-col gap-1.5">
+              <div className="mt-4 sm:mt-2 flex flex-col gap-3 sm:gap-1.5">
                 <div className="flex items-center justify-center gap-2 sm:justify-end">
                   <span className="font-body text-sm text-sandstone/70">Ankur Yadav</span>
-                  <a href="tel:+916206105858" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 6206105858</a>
+                  <a href="tel:+919536783342" aria-label="Call Ankur" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 9536783342</a>
                 </div>
                 <div className="flex items-center justify-center gap-2 sm:justify-end">
                   <span className="font-body text-sm text-sandstone/70">Sanskar Thakur</span>
-                  <a href="tel:+919536783342" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 9536783342</a>
+                  <a href="tel:+916206105858" aria-label="Call Sanskar" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 6206105858</a>
                 </div>
               </div>
             </div>
