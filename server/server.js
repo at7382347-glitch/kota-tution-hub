@@ -20,7 +20,9 @@ if (!fs.existsSync(uploadsDir)) {
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://kota-tution-hub.vercel.app'
+  'https://kota-tution-hub.vercel.app',
+  'https://nexvedinstitute.com',
+  'https://www.nexvedinstitute.com'
 ];
 
 app.use(cors({
@@ -52,5 +54,3 @@ app.use('/api/admin', adminRoutes);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-// Trigger Vercel Deploy
