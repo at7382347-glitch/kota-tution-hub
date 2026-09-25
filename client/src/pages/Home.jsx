@@ -181,8 +181,8 @@ function Home() {
 
           <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
             {[
-              { title: 'Foundation (Class 6-8)', price: 'From ₹6,500', period: '/month', desc: 'Build a strong academic base.' },
-              { title: 'Board Exams (Class 9-12)', price: 'From ₹7,500', period: '/month', desc: 'Score high with expert guidance.' },
+              { title: 'Foundation (Class 6-8)', price: 'From ₹7,500', period: '/month', desc: 'Build a strong academic base.' },
+              { title: 'Board Exams (Class 9-12)', price: 'From ₹8,500', period: '/month', desc: 'Score high with expert guidance.' },
               { title: 'JEE / NEET Prep', price: 'From ₹12,000', period: '/month', desc: 'Advanced coaching & dropper batches.' },
             ].map((tier) => (
               <div
