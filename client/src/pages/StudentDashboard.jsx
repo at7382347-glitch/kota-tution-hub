@@ -15,10 +15,10 @@ const BUDGET_PACKAGES = [
   { value: 'class-10-board', label: 'Class 10 (School/Board) - ₹8,500/month (1 hour/day)' },
   { value: 'class-9-10-jee-neet', label: 'Class 9 & 10 (JEE/NEET Foundation) - ₹9,000/month (1 hour/day)' },
   { value: 'class-11-board', label: 'Class 11 (School/Board) - ₹9,500/month (1 hour/day)' },
-  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹10,000/month (1 hour/day)' },
+  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹12,000/month (1 hour/day)' },
   { value: 'class-12-board', label: 'Class 12 (School/Board) - ₹9,500/month (1 hour/day)' },
-  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹10,000/month (1 hour/day)' },
-  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹10,000/month (1 hour/day)' },
+  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹12,000/month (1 hour/day)' },
+  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹12,000/month (1 hour/day)' },
 ];
 
 const initialForm = {
