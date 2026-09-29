@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const RAW_API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : (import.meta.env.VITE_API_URL || '');
-const API_BASE = (RAW_API_BASE || '').replace(/\/+$/, '');
+const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 
-// Resolve the teacher's photo from all known shapes.
-// Returns an absolute URL ready for <img>, or null when no URL exists.
+// Build a loadable image URL from the teacher object.
+// - http(s) URLs are returned as-is.
+// - /uploads/... or uploads/... paths are resolved against VITE_API_URL,
+//   falling back to a relative same-host URL when VITE_API_URL is undefined.
 function resolveTeacherPhotoUrl(teacher) {
   const raw =
     teacher?.teacherProfile?.profilePhoto ||
@@ -17,16 +18,20 @@ function resolveTeacherPhotoUrl(teacher) {
     teacher?.user?.profilePicture ||
     '';
 
-  const url = typeof raw === 'string' ? raw.trim() : '';
+  if (typeof raw !== 'string') return null;
+  const url = raw.trim();
   if (!url) return null;
 
-  // Absolute URLs (Google avatar, Cloudinary, data/blob) must be used as-is.
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
 
-  // Relative backend paths (e.g. "/uploads/abc.jpg" or "uploads/abc.jpg")
-  // need the API base URL prepended so they load in production.
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return API_BASE ? `${API_BASE}${path}` : path;
+  const normalized = url.startsWith('/') ? url : `/${url}`;
+  if (normalized.startsWith('/uploads/')) {
+    if (API_BASE) return `${API_BASE}${normalized}`;
+    return normalized;
+  }
+
+  if (API_BASE) return `${API_BASE}${normalized}`;
+  return normalized;
 }
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
@@ -233,11 +238,8 @@ function BrowseTeachers() {
 
 /* ─── Teacher Card Component ─── */
 function TeacherCard({ teacher }) {
-  const [imageError, setImageError] = useState(false);
-
   const p = teacher?.teacherProfile || {};
   const photoUrl = resolveTeacherPhotoUrl(teacher);
-  const showImage = !!photoUrl && !imageError;
 
   const bioPreview =
     p.bio && p.bio.length > 80 ? p.bio.slice(0, 80) + '…' : p.bio;
@@ -247,21 +249,18 @@ function TeacherCard({ teacher }) {
       {/* Top section: photo + basic info */}
       <div className="p-4 sm:p-5 flex gap-4">
         {/* Photo */}
-        {showImage ? (
-          <img
-            key={photoUrl}
-            src={photoUrl}
-            onError={() => setImageError(true)}
-            alt={`${teacher.name || 'Verified teacher'}, ${p?.subjects?.[0] || 'expert'} tutor in Kota`}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl object-cover border border-ink/10 flex-shrink-0 bg-sandstone"
-          />
-        ) : (
-          <div className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl bg-marigold/15 flex items-center justify-center text-marigold text-xl sm:text-2xl font-bold flex-shrink-0 font-display">
-            {(teacher.name || 'T').charAt(0).toUpperCase()}
-          </div>
-        )}
+        <div className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl bg-marigold/15 flex items-center justify-center text-marigold text-xl sm:text-2xl font-bold flex-shrink-0 font-display overflow-hidden relative">
+          <span>{(teacher.name || 'T').charAt(0).toUpperCase()}</span>
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              alt={`${teacher.name || 'Verified teacher'}, ${p?.subjects?.[0] || 'expert'} tutor in Kota`}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full rounded-xl object-cover border border-ink/10 bg-sandstone"
+            />
+          ) : null}
+        </div>
 
         <div className="min-w-0">
           <h3 className="font-display text-sm sm:text-base font-semibold text-ink truncate">
