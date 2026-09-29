@@ -2,7 +2,32 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
+const RAW_API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : (import.meta.env.VITE_API_URL || '');
+const API_BASE = (RAW_API_BASE || '').replace(/\/+$/, '');
+
+// Resolve the teacher's photo from all known shapes.
+// Returns an absolute URL ready for <img>, or null when no URL exists.
+function resolveTeacherPhotoUrl(teacher) {
+  const raw =
+    teacher?.teacherProfile?.profilePhoto ||
+    teacher?.profilePicture ||
+    teacher?.photo ||
+    teacher?.avatar ||
+    teacher?.photoURL ||
+    teacher?.user?.profilePicture ||
+    '';
+
+  const url = typeof raw === 'string' ? raw.trim() : '';
+  if (!url) return null;
+
+  // Absolute URLs (Google avatar, Cloudinary, data/blob) must be used as-is.
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+
+  // Relative backend paths (e.g. "/uploads/abc.jpg" or "uploads/abc.jpg")
+  // need the API base URL prepended so they load in production.
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return API_BASE ? `${API_BASE}${path}` : path;
+}
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
@@ -209,11 +234,10 @@ function BrowseTeachers() {
 /* ─── Teacher Card Component ─── */
 function TeacherCard({ teacher }) {
   const [imageError, setImageError] = useState(false);
-  
-  const p = teacher.teacherProfile;
-  const photoUrl = p.profilePhoto
-    ? `${API_BASE}${p.profilePhoto}`
-    : null;
+
+  const p = teacher?.teacherProfile || {};
+  const photoUrl = resolveTeacherPhotoUrl(teacher);
+  const showImage = !!photoUrl && !imageError;
 
   const bioPreview =
     p.bio && p.bio.length > 80 ? p.bio.slice(0, 80) + '…' : p.bio;
@@ -223,19 +247,15 @@ function TeacherCard({ teacher }) {
       {/* Top section: photo + basic info */}
       <div className="p-4 sm:p-5 flex gap-4">
         {/* Photo */}
-        {photoUrl && !imageError ? (
+        {showImage ? (
           <img
+            key={photoUrl}
             src={photoUrl}
-            onError={(e) => {
-              const prodUrl = `${import.meta.env.VITE_API_URL}${p.profilePhoto}`;
-              if (import.meta.env.DEV && e.target.src !== prodUrl && p.profilePhoto && !p.profilePhoto.startsWith('http')) {
-                e.target.src = prodUrl;
-              } else {
-                setImageError(true);
-              }
-            }}
+            onError={() => setImageError(true)}
             alt={`${teacher.name || 'Verified teacher'}, ${p?.subjects?.[0] || 'expert'} tutor in Kota`}
-            className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl object-cover border border-ink/10 flex-shrink-0"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl object-cover border border-ink/10 flex-shrink-0 bg-sandstone"
           />
         ) : (
           <div className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl bg-marigold/15 flex items-center justify-center text-marigold text-xl sm:text-2xl font-bold flex-shrink-0 font-display">
