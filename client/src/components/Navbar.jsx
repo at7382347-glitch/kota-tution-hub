@@ -8,6 +8,7 @@ function Navbar() {
       </Link>
       <div className="flex flex-wrap items-center gap-3 sm:gap-4 ml-auto text-sm sm:text-base justify-end">
         <Link to="/" className="text-gray-600 hover:text-blue-600">Home</Link>
+        <Link to="/fee-structure" className="text-gray-600 hover:text-blue-600">Fee Structure</Link>
         <Link to="/browse-teachers" className="text-gray-600 hover:text-blue-600">Browse Teachers</Link>
         <Link to="/login" className="text-gray-600 hover:text-blue-600">Login</Link>
       </div>
