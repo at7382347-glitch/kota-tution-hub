@@ -100,19 +100,6 @@ function StudentDashboard() {
     });
   };
 
-  // Toggle checkboxes for budget packages
-  const handleBudgetToggle = (pkg) => {
-    setForm((prev) => {
-      const arr = prev.budgetPackages;
-      return {
-        ...prev,
-        budgetPackages: arr.includes(pkg)
-          ? arr.filter((p) => p !== pkg)
-          : [...arr, pkg],
-      };
-    });
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -140,7 +127,7 @@ function StudentDashboard() {
       return;
     }
     if (form.budgetPackages.length === 0) {
-      setMessage({ text: 'Please select at least one fee package.', type: 'error' });
+      setMessage({ text: 'Please select a fee package.', type: 'error' });
       return;
     }
     if (!form.area.trim()) {
@@ -531,34 +518,45 @@ function StudentDashboard() {
               </div>
             </fieldset>
 
-            {/* Fee Packages (checkboxes as pill toggles) */}
-            <fieldset>
-              <legend className="text-sm font-medium text-ink/70 mb-2 font-body">
-                Select Fee Package <span className="text-maroon">*</span> <span className="text-ink/30 text-xs">(select one or more)</span>
-              </legend>
-              <div className="space-y-2">
-                {BUDGET_PACKAGES.map((pkg) => (
-                  <label
-                    key={pkg.value}
-                    htmlFor={`package-${pkg.value}`}
-                    className={`flex items-start gap-3 p-4 sm:p-3 rounded-lg border cursor-pointer select-none transition-all duration-200 ${
-                      form.budgetPackages.includes(pkg.value)
-                        ? 'bg-marigold/10 border-marigold/40'
-                        : 'bg-white border-ink/10 hover:border-marigold/30'
-                    }`}
-                  >
-                    <input
-                      id={`package-${pkg.value}`}
-                      type="checkbox"
-                      className="accent-marigold w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5"
-                      checked={form.budgetPackages.includes(pkg.value)}
-                      onChange={() => handleBudgetToggle(pkg.value)}
-                    />
-                    <span className="text-sm font-mono text-ink whitespace-normal break-words">{pkg.label}</span>
-                  </label>
-                ))}
+            {/* Fee Package (single select dropdown) */}
+            <div>
+              <label htmlFor="budgetPackage" className="block text-sm font-medium text-ink/70 mb-1 font-body">
+                Select Fee Package <span className="text-maroon">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  id="budgetPackage"
+                  name="budgetPackage"
+                  value={form.budgetPackages[0] || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      budgetPackages: val ? [val] : [],
+                    }));
+                  }}
+                  className="w-full appearance-none rounded-lg border border-ink/15 bg-white px-3 py-3 sm:py-2 pr-10 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
+                >
+                  <option value="">Select Fee Package</option>
+                  {BUDGET_PACKAGES.map((pkg) => (
+                    <option key={pkg.value} value={pkg.value}>
+                      {pkg.label}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
-            </fieldset>
+            </div>
 
             {/* Area */}
             <div>
