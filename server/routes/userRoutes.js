@@ -170,7 +170,13 @@ router.put('/:firebaseUid/student-requirement', async (req, res) => {
     console.log('[PUT student-requirement] Params:', req.params);
     console.log('[PUT student-requirement] Body:', req.body);
 
-    const { name, contactNumber, subjects, classLevel, budgetPackages, area, additionalNotes } = req.body;
+    const { name, contactNumber, subjects, classLevel, budgetPackages, area, additionalNotes, isGroupTuition, groupSize, perStudentFee } = req.body;
+
+    const groupFlag = !!isGroupTuition;
+    const parsedGroupSize = groupFlag ? (Number(groupSize) === 3 ? 3 : 2) : 1;
+    const parsedPerStudentFee = perStudentFee !== undefined && perStudentFee !== null && perStudentFee !== ''
+      ? Number(perStudentFee) || null
+      : null;
 
     const requirementData = {
       contactNumber: contactNumber || '',
@@ -180,6 +186,9 @@ router.put('/:firebaseUid/student-requirement', async (req, res) => {
       area: area || '',
       mode: 'offline',
       additionalNotes: (additionalNotes || '').slice(0, 200),
+      isGroupTuition: groupFlag,
+      groupSize: parsedGroupSize,
+      perStudentFee: parsedPerStudentFee,
       isRequirementComplete: true,
     };
 
@@ -213,6 +222,9 @@ router.put('/:firebaseUid/student-requirement', async (req, res) => {
       existingRequest.studentContactNumber = requirementData.contactNumber;
       existingRequest.area = requirementData.area || '';
       existingRequest.classLevel = requirementData.classLevel || '';
+      existingRequest.isGroupTuition = requirementData.isGroupTuition;
+      existingRequest.groupSize = requirementData.groupSize;
+      existingRequest.perStudentFee = requirementData.perStudentFee;
       await existingRequest.save();
       console.log(`Updated pending general request for ${user.firebaseUid}`);
     } else {
@@ -224,7 +236,10 @@ router.put('/:firebaseUid/student-requirement', async (req, res) => {
         classLevel: requirementData.classLevel || '',
         subject: subjectString,
         requestType: 'general',
-        status: 'pending'
+        status: 'pending',
+        isGroupTuition: requirementData.isGroupTuition,
+        groupSize: requirementData.groupSize,
+        perStudentFee: requirementData.perStudentFee
       });
       console.log(`Created new general request for ${user.firebaseUid}`);
     }

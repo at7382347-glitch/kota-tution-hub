@@ -297,7 +297,7 @@ function AdminDashboard() {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[1000px]">
+            <table className="w-full text-sm text-left min-w-[1150px]">
               <thead className="bg-sandstone/70 text-ink/50 text-xs uppercase font-medium font-display">
                 <tr>
                   <th className="px-6 py-3">Date</th>
@@ -305,6 +305,7 @@ function AdminDashboard() {
                   <th className="px-6 py-3">Contact</th>
                   <th className="px-6 py-3">Teacher Requested</th>
                   <th className="px-6 py-3">Subject</th>
+                  <th className="px-6 py-3">Tuition Type</th>
                   <th className="px-6 py-3">Demo Status</th>
                   <th className="px-6 py-3">Status</th>
                 </tr>
@@ -312,7 +313,7 @@ function AdminDashboard() {
               <tbody className="divide-y divide-ink/8">
                 {requests.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-ink/40 font-body">
+                    <td colSpan="8" className="px-6 py-8 text-center text-ink/40 font-body">
                       No requests found.
                     </td>
                   </tr>
@@ -394,6 +395,17 @@ function AdminDashboard() {
                         <span className="bg-marigold/10 text-marigold px-2.5 py-1 rounded-full text-xs font-medium font-body">
                           {req.subject || 'N/A'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {req.isGroupTuition ? (
+                          <span className="inline-block bg-sage/15 text-sage px-2.5 py-1 rounded-full text-xs font-semibold font-body whitespace-nowrap">
+                            Group Tuition ({req.groupSize || 2} Students){req.perStudentFee ? ` - ₹${Number(req.perStudentFee).toLocaleString('en-IN')}/student` : ''}
+                          </span>
+                        ) : (
+                          <span className="inline-block bg-ink/8 text-ink/60 px-2.5 py-1 rounded-full text-xs font-medium font-body whitespace-nowrap">
+                            Solo Tuition
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {req.demoStatus === 'not_scheduled' && req.teacherName ? (
@@ -626,6 +638,17 @@ function AdminDashboard() {
                         <div className="min-w-0">
                           <h3 className="text-base font-semibold font-display text-ink truncate">{s.name || 'Unnamed'}</h3>
                           <p className="text-xs font-body text-ink/50">Class {r.classLevel || '—'}</p>
+                          <div className="mt-1.5">
+                            {r.isGroupTuition ? (
+                              <span className="inline-block bg-sage/15 text-sage text-[10px] px-2 py-0.5 rounded-full font-body font-semibold">
+                                Group Tuition ({r.groupSize || 2} Students){r.perStudentFee ? ` - ₹${Number(r.perStudentFee).toLocaleString('en-IN')}/student` : ''}
+                              </span>
+                            ) : (
+                              <span className="inline-block bg-ink/8 text-ink/60 text-[10px] px-2 py-0.5 rounded-full font-body font-medium">
+                                Solo Tuition
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 

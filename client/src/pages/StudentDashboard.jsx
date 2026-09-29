@@ -21,6 +21,21 @@ const BUDGET_PACKAGES = [
   { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹12,000/month (1 hour/day)' },
 ];
 
+// Numeric monthly fee per package value — used for group split calculator
+const PACKAGE_FEE_MAP = {
+  'class-6': 7500,
+  'class-7': 7500,
+  'class-8': 8500,
+  'class-9-board': 8500,
+  'class-10-board': 10000,
+  'class-9-10-jee-neet': 10000,
+  'class-11-board': 10000,
+  'class-11-jee-neet': 12000,
+  'class-12-board': 10000,
+  'class-12-jee-neet': 12000,
+  'dropper-jee-neet': 12000,
+};
+
 const initialForm = {
   name: '',
   contactNumber: '',
@@ -30,6 +45,8 @@ const initialForm = {
   area: '',
   mode: 'offline',
   additionalNotes: '',
+  isGroupTuition: false,
+  groupSize: 2,
 };
 
 function StudentDashboard() {
@@ -64,6 +81,8 @@ function StudentDashboard() {
               area: data.studentRequirement.area || '',
               mode: 'offline',
               additionalNotes: data.studentRequirement.additionalNotes || '',
+              isGroupTuition: !!data.studentRequirement.isGroupTuition,
+              groupSize: [2, 3].includes(data.studentRequirement.groupSize) ? data.studentRequirement.groupSize : 2,
             });
             setShowForm(false);
           } else {
@@ -104,6 +123,12 @@ function StudentDashboard() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  // Group tuition calculator (derived, not stored)
+  const selectedPackageValue = form.budgetPackages[0] || '';
+  const baseFee = PACKAGE_FEE_MAP[selectedPackageValue] || 0;
+  const activeGroupSize = form.isGroupTuition ? Number(form.groupSize) || 2 : 1;
+  const perStudentFee = baseFee ? Math.round(baseFee / activeGroupSize) : 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -160,6 +185,9 @@ function StudentDashboard() {
           area: form.area,
           mode: 'offline',
           additionalNotes: form.additionalNotes,
+          isGroupTuition: !!form.isGroupTuition,
+          groupSize: form.isGroupTuition ? (Number(form.groupSize) === 3 ? 3 : 2) : 1,
+          perStudentFee: baseFee ? Math.round(baseFee / (form.isGroupTuition ? (Number(form.groupSize) === 3 ? 3 : 2) : 1)) : 0,
         }),
       });
 
@@ -298,6 +326,21 @@ function StudentDashboard() {
                   })}
                   {(!req.budgetPackages || req.budgetPackages.length === 0) && <span className="text-ink/30">—</span>}
                 </div>
+              </div>
+
+              {/* Tuition Type */}
+              <div className="sm:col-span-2">
+                <p className="font-display text-ink/40 text-xs uppercase tracking-wide mb-1">Tuition Type</p>
+                {req.isGroupTuition ? (
+                  <span className="inline-block bg-sage/15 text-sage text-xs px-2.5 py-1 rounded-full font-body font-semibold">
+                    Group Tuition ({req.groupSize || 2} Students)
+                    {req.perStudentFee ? ` - ₹${Number(req.perStudentFee).toLocaleString('en-IN')}/student` : ''}
+                  </span>
+                ) : (
+                  <span className="inline-block bg-ink/8 text-ink/60 text-xs px-2.5 py-1 rounded-full font-body font-medium">
+                    Solo Tuition
+                  </span>
+                )}
               </div>
 
               {req.additionalNotes && (
@@ -556,6 +599,76 @@ function StudentDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
+            </div>
+
+            {/* Group Tuition / Split Fee */}
+            <div className="rounded-xl border border-ink/10 bg-sandstone/50 p-4 sm:p-5">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!form.isGroupTuition}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, isGroupTuition: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4 shrink-0 accent-[#b8860b] cursor-pointer"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ink font-body">
+                    Study with Friends &amp; Split Fee (Up to 3 Students)
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink/50 font-body">
+                    Share one tutor with friends and split the package fee equally.
+                  </span>
+                </span>
+              </label>
+
+              {form.isGroupTuition && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="groupSize" className="block text-xs font-medium text-ink/70 mb-1 font-body">
+                      Group Size
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="groupSize"
+                        name="groupSize"
+                        value={String(form.groupSize)}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, groupSize: Number(e.target.value) }))
+                        }
+                        className="w-full appearance-none rounded-lg border border-ink/15 bg-white px-3 py-3 sm:py-2 pr-10 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
+                      >
+                        <option value="2">2 Students</option>
+                        <option value="3">3 Students</option>
+                      </select>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex items-center rounded-lg border border-marigold/30 bg-marigold/10 px-3 py-3 sm:py-2">
+                    {baseFee ? (
+                      <p className="text-xs sm:text-sm font-body text-ink">
+                        <span className="font-mono font-semibold">₹{baseFee.toLocaleString('en-IN')}</span>
+                        <span className="text-ink/50"> / {activeGroupSize} = </span>
+                        <span className="font-mono font-bold text-marigold">₹{perStudentFee.toLocaleString('en-IN')}/month per student</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs font-body text-ink/50">
+                        Select a fee package above to see per-student split.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Area */}

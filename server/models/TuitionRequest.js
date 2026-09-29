@@ -69,6 +69,19 @@ const tuitionRequestSchema = new mongoose.Schema({
     enum: ["pending", "yes", "no"],
     default: "pending"
   },
+  isGroupTuition: {
+    type: Boolean,
+    default: false,
+  },
+  groupSize: {
+    type: Number,
+    enum: [1, 2, 3],
+    default: 1,
+  },
+  perStudentFee: {
+    type: Number,
+    default: null,
+  },
   feeAmount: {
     type: Number,
     default: null

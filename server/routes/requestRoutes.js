@@ -6,7 +6,7 @@ const User = require('../models/User');
 // POST /api/requests - Create a new tuition request
 router.post('/', async (req, res) => {
   try {
-    const { studentFirebaseUid, teacherFirebaseUid, subject } = req.body;
+    const { studentFirebaseUid, teacherFirebaseUid, subject, isGroupTuition, groupSize, perStudentFee } = req.body;
 
     if (!studentFirebaseUid || !teacherFirebaseUid || !subject) {
       return res.status(400).json({
@@ -26,6 +26,18 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Teacher not found.' });
     }
 
+    // Group tuition fields — prefer explicit payload, fall back to student's saved requirement (backward compatible)
+    const groupFlag = isGroupTuition !== undefined
+      ? !!isGroupTuition
+      : !!student.studentRequirement?.isGroupTuition;
+    const parsedGroupSize = groupFlag
+      ? ([2, 3].includes(Number(groupSize)) ? Number(groupSize)
+        : ([2, 3].includes(student.studentRequirement?.groupSize) ? student.studentRequirement.groupSize : 2))
+      : 1;
+    const parsedPerStudentFee = (perStudentFee !== undefined && perStudentFee !== null && perStudentFee !== '')
+      ? (Number(perStudentFee) || null)
+      : (student.studentRequirement?.perStudentFee ?? null);
+
     // Build the request document
     const tuitionRequest = await TuitionRequest.create({
       studentFirebaseUid,
@@ -38,6 +50,9 @@ router.post('/', async (req, res) => {
       teacherName: teacher.name || '',
       subject,
       requestType: 'direct',
+      isGroupTuition: groupFlag,
+      groupSize: parsedGroupSize,
+      perStudentFee: parsedPerStudentFee,
     });
 
     console.log(

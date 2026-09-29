@@ -95,6 +95,19 @@ const studentRequirementSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  isGroupTuition: {
+    type: Boolean,
+    default: false,
+  },
+  groupSize: {
+    type: Number,
+    enum: [1, 2, 3],
+    default: 1,
+  },
+  perStudentFee: {
+    type: Number,
+    default: null,
+  },
   isRequirementComplete: {
     type: Boolean,
     default: false,
