@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { auth } from '../firebase';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
+import { apiFetch } from '../api';
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
@@ -66,7 +66,7 @@ function StudentDashboard() {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/users/${firebaseUser.uid}`);
+        const res = await apiFetch(`/api/users/${firebaseUser.uid}`);
         if (res.ok) {
           const data = await res.json();
           setUser(data);
@@ -91,7 +91,7 @@ function StudentDashboard() {
         }
 
         // Fetch requests for this student
-        const reqsRes = await fetch(`${API_BASE}/api/requests`);
+        const reqsRes = await apiFetch(`/api/requests`);
         if (reqsRes.ok) {
           const reqsData = await reqsRes.json();
           const studentReqs = reqsData.filter((r) => r.studentFirebaseUid === firebaseUser.uid);
@@ -132,7 +132,6 @@ function StudentDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('[StudentDashboard] handleSubmit fired');
 
     // Validate all required fields
     if (!form.name.trim()) {
@@ -171,9 +170,8 @@ function StudentDashboard() {
         return;
       }
 
-      console.log('[StudentDashboard] Sending PUT to', `${API_BASE}/api/users/${firebaseUid}/student-requirement`);
 
-      const res = await fetch(`${API_BASE}/api/users/${firebaseUid}/student-requirement`, {
+      const res = await apiFetch(`/api/users/${firebaseUid}/student-requirement`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -191,7 +189,6 @@ function StudentDashboard() {
         }),
       });
 
-      console.log('[StudentDashboard] Response status:', res.status);
 
       if (res.ok) {
         const data = await res.json();
@@ -215,7 +212,7 @@ function StudentDashboard() {
   // Student confirmation handler (mirrors TeacherDashboard)
   const handleConfirm = async (requestId, confirmationVal) => {
     try {
-      const res = await fetch(`${API_BASE}/api/requests/${requestId}/confirm`, {
+      const res = await apiFetch(`/api/requests/${requestId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirmerRole: 'student', confirmation: confirmationVal }),
@@ -247,6 +244,17 @@ function StudentDashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-sandstone">
         <p className="font-body text-ink/60 text-lg">Please log in to access the Student Dashboard.</p>
+      </div>
+    );
+  }
+
+  if (user.role !== 'student') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-sandstone px-4 text-center gap-3">
+        <p className="font-body text-ink/60 text-lg">This dashboard is for student accounts only.</p>
+        <Link to="/teacher/dashboard" className="font-body text-marigold font-semibold hover:text-marigold/80">
+          Go to Teacher Dashboard →
+        </Link>
       </div>
     );
   }

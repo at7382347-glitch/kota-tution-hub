@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+import { API_BASE, apiFetch } from '../api';
 
 // Build a loadable image URL from the teacher object.
 // - Full http(s) URLs (Cloudinary) are returned as-is.
@@ -46,7 +46,7 @@ function BrowseTeachers() {
       
       while (attempts > 0) {
         try {
-          const res = await fetch(`${API_BASE}/api/users/teachers`);
+          const res = await apiFetch(`/api/users/teachers`);
           if (res.ok) {
             const data = await res.json();
             setTeachers(data);

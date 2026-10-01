@@ -176,7 +176,7 @@ function Home() {
             Affordable &amp; Transparent Pricing
           </h2>
           <p className="font-body text-ink/60 mx-auto mt-3 max-w-xl text-base sm:text-lg">
-            No hidden fees. Pay the tutor directly after a free demo class.
+            No hidden fees. Start with a free demo class, then pay securely through Kota Tuition Hub.
           </p>
 
           <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
+import { API_BASE, adminFetch, getAdminToken, setAdminToken } from '../api';
 
 const FEE_PACKAGES = {
   '1hr-10000': '1 hr — ₹10,000/mo',
@@ -45,19 +45,14 @@ function AdminDashboard() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (localStorage.getItem('adminLoggedIn') !== 'true') {
-      navigate('/admin/login', { replace: true });
-    }
-  }, [navigate]);
 
   const fetchData = async () => {
     try {
       const [statsRes, reqsRes, teachersRes, studentsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/admin/stats`),
-        fetch(`${API_BASE}/api/requests`),
-        fetch(`${API_BASE}/api/users/teachers`),
-        fetch(`${API_BASE}/api/users/students`),
+        adminFetch(`/api/admin/stats`),
+        adminFetch(`/api/requests`),
+        adminFetch(`/api/admin/teachers`),
+        adminFetch(`/api/users/students`),
       ]);
 
       if (!statsRes.ok || !reqsRes.ok) {
@@ -82,12 +77,16 @@ function AdminDashboard() {
   };
 
   useEffect(() => {
+    if (!getAdminToken()) {
+      navigate('/admin/login', { replace: true });
+      return;
+    }
     fetchData();
-  }, []);
+  }, [navigate]);
 
   const handleStatusChange = async (requestId, newStatus) => {
     try {
-      const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
+      const res = await adminFetch(`/api/requests/${requestId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -100,7 +99,7 @@ function AdminDashboard() {
         ));
         
         // Optionally refresh stats
-        fetch(`${API_BASE}/api/admin/stats`)
+        adminFetch(`/api/admin/stats`)
           .then(res => res.json())
           .then(data => setStats(data))
           .catch(err => console.error("Stats refresh error", err));
@@ -121,7 +120,7 @@ function AdminDashboard() {
     }
     
     try {
-      const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
+      const res = await adminFetch(`/api/requests/${requestId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -157,7 +156,7 @@ function AdminDashboard() {
       if (demoDate) bodyData.demoDate = demoDate;
       if (demoNotes !== null) bodyData.demoNotes = demoNotes;
 
-      const res = await fetch(`${API_BASE}/api/admin/requests/${requestId}/demo`, {
+      const res = await adminFetch(`/api/admin/requests/${requestId}/demo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData),
@@ -170,7 +169,7 @@ function AdminDashboard() {
         setDemoDateInput('');
         setDemoNotesInput('');
         
-        fetch(`${API_BASE}/api/admin/stats`)
+        adminFetch(`/api/admin/stats`)
           .then(res => res.json())
           .then(data => setStats(data))
           .catch(err => console.error("Stats refresh error", err));
@@ -189,7 +188,7 @@ function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${firebaseUid}`, {
+      const res = await adminFetch(`/api/admin/users/${firebaseUid}`, {
         method: 'DELETE',
       });
 
@@ -242,7 +241,7 @@ function AdminDashboard() {
           <h1 className="font-display text-ink text-2xl font-bold">Admin Dashboard</h1>
           <button 
             onClick={() => {
-              localStorage.removeItem('adminLoggedIn');
+              setAdminToken(null);
               navigate('/admin/login', { replace: true });
             }}
             className="text-sm font-body text-ink/60 hover:text-maroon font-medium transition-colors"

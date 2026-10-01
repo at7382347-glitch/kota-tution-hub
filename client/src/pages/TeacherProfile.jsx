@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { auth } from '../firebase';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
+import { API_BASE, apiFetch } from '../api';
 
 const FEE_PACKAGES = {
   '1hr-10000': '1 hr — ₹10,000/mo',
@@ -36,7 +36,7 @@ function TeacherProfile() {
   useEffect(() => {
     async function fetchTeacher() {
       try {
-        const res = await fetch(`${API_BASE}/api/users/teachers/${id}`);
+        const res = await apiFetch(`/api/users/teachers/${id}`);
         if (res.ok) {
           const data = await res.json();
           setTeacher(data);
@@ -81,7 +81,7 @@ function TeacherProfile() {
     setRequestMessage({ text: '', type: '' });
 
     try {
-      const res = await fetch(`${API_BASE}/api/requests`, {
+      const res = await apiFetch(`/api/requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +124,7 @@ function TeacherProfile() {
 
     setSubmittingReview(true);
     try {
-      const res = await fetch(`${API_BASE}/api/users/teachers/${teacher.firebaseUid}/rate`, {
+      const res = await apiFetch(`/api/users/teachers/${teacher.firebaseUid}/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

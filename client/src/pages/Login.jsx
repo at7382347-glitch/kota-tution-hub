@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithPopup, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { Helmet } from 'react-helmet-async';
+import { apiFetch } from '../api';
 
 function Login() {
   const navigate = useNavigate();
@@ -38,14 +39,26 @@ function Login() {
     }
   }, []);
 
+  // ---------- Redirect based on the role saved on the server ----------
+  const redirectForRole = (role) => {
+    // If user was trying to visit a protected page, redirect there instead
+    if (redirectTo) {
+      navigate(redirectTo, { replace: true });
+    } else if (role === 'student') {
+      navigate('/student/dashboard');
+    } else {
+      navigate('/teacher/dashboard');
+    }
+  };
+
   // ---------- Sync user to backend + redirect ----------
+  // `role` is only used for first-time registration; the server keeps an existing user's role.
   const syncAndRedirect = async (firebaseUser, role) => {
     try {
       setSyncing(true);
       setError('');
 
       const payload = {
-        firebaseUid: firebaseUser.uid,
         name: firebaseUser.displayName || firebaseUser.phoneNumber || '',
         email: firebaseUser.email || '',
         phone: firebaseUser.phoneNumber || '',
@@ -53,30 +66,19 @@ function Login() {
         role,
       };
 
-      console.log('Syncing user to backend:', payload);
-
-      const res = await fetch(`${import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL}/api/users/sync`, {
+      const res = await apiFetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to sync user.');
       }
 
       const savedUser = await res.json();
-      console.log('User saved to DB:', savedUser);
-
-      // If user was trying to visit a protected page, redirect there instead
-      if (redirectTo) {
-        navigate(redirectTo, { replace: true });
-      } else if (role === 'student') {
-        navigate('/student/dashboard');
-      } else {
-        navigate('/teacher/dashboard');
-      }
+      redirectForRole(savedUser.role);
     } catch (err) {
       console.error('Sync error:', err);
       setError(err.message);
@@ -85,13 +87,28 @@ function Login() {
     }
   };
 
+  // ---------- After sign-in: returning users skip role selection ----------
+  const handleSignedIn = async (firebaseUser) => {
+    try {
+      const res = await apiFetch(`/api/users/${firebaseUser.uid}`);
+      if (res.ok) {
+        // Existing account — refresh contact details and go straight to their dashboard
+        await syncAndRedirect(firebaseUser);
+        return;
+      }
+    } catch (err) {
+      console.error('User lookup error:', err);
+    }
+    // New user (or lookup failed) — show the role selection
+    setUser(firebaseUser);
+  };
+
   // ---------- Google Sign-In ----------
   const handleGoogleSignIn = async () => {
     try {
       setError('');
       const result = await signInWithPopup(auth, googleProvider);
-      console.log('Google Sign-In successful:', result.user);
-      setUser(result.user);
+      await handleSignedIn(result.user);
     } catch (err) {
       console.error('Google Sign-In error:', err);
       setError(err.message);
@@ -113,7 +130,6 @@ function Login() {
       const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setOtpSent(true);
-      console.log('OTP sent to', fullPhone);
     } catch (err) {
       console.error('Send OTP error:', err);
       if (recaptchaVerifierRef.current) {
@@ -138,8 +154,7 @@ function Login() {
       setError('');
       setVerifying(true);
       const result = await confirmationResult.confirm(otp);
-      console.log('Phone Sign-In successful:', result.user);
-      setUser(result.user);
+      await handleSignedIn(result.user);
     } catch (err) {
       console.error('Verify OTP error:', err);
       setError('Invalid OTP. Please check and try again.');

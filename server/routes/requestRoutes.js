@@ -1,27 +1,40 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const TuitionRequest = require('../models/TuitionRequest');
 const User = require('../models/User');
+const { requireUser, requireAdmin, requireUserOrAdmin } = require('../middleware/auth');
 
-// POST /api/requests - Create a new tuition request
-router.post('/', async (req, res) => {
+const COMMISSION_RATE = 0.1; // Platform keeps 10%, teacher gets 90%
+
+// Rejects malformed :requestId values with 400 instead of a CastError 500
+router.param('requestId', (req, res, next, id) => {
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid request ID.' });
+  }
+  next();
+});
+
+// POST /api/requests - Student creates a tuition request for a teacher
+router.post('/', requireUser, async (req, res) => {
   try {
-    const { studentFirebaseUid, teacherFirebaseUid, subject, isGroupTuition, groupSize, perStudentFee } = req.body;
+    const { teacherFirebaseUid, subject, isGroupTuition, groupSize, perStudentFee } = req.body;
+    const studentFirebaseUid = req.firebaseUid;
 
-    if (!studentFirebaseUid || !teacherFirebaseUid || !subject) {
+    if (!teacherFirebaseUid || !subject) {
       return res.status(400).json({
-        error: 'studentFirebaseUid, teacherFirebaseUid, and subject are required.',
+        error: 'teacherFirebaseUid and subject are required.',
       });
     }
 
     // Look up student info
     const student = await User.findOne({ firebaseUid: studentFirebaseUid });
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found.' });
+    if (!student || student.role !== 'student') {
+      return res.status(403).json({ error: 'Only student accounts can send tuition requests.' });
     }
 
     // Look up teacher info
-    const teacher = await User.findOne({ firebaseUid: teacherFirebaseUid });
+    const teacher = await User.findOne({ firebaseUid: teacherFirebaseUid, role: 'teacher' });
     if (!teacher) {
       return res.status(404).json({ error: 'Teacher not found.' });
     }
@@ -55,9 +68,7 @@ router.post('/', async (req, res) => {
       perStudentFee: parsedPerStudentFee,
     });
 
-    console.log(
-      `[POST /requests] Request created: ${student.name || studentFirebaseUid} → ${teacher.name || teacherFirebaseUid} (${subject})`
-    );
+    console.log(`[POST /requests] Request created: ${tuitionRequest._id} (${subject})`);
 
     res.status(201).json(tuitionRequest);
   } catch (err) {
@@ -66,10 +77,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/requests - Fetch all tuition requests (newest first)
-router.get('/', async (req, res) => {
+// GET /api/requests - Admin gets all requests; a user gets only their own (newest first)
+router.get('/', requireUserOrAdmin, async (req, res) => {
   try {
-    const requests = await TuitionRequest.find().sort({ createdAt: -1 });
+    const filter = req.isAdmin
+      ? {}
+      : { $or: [{ studentFirebaseUid: req.firebaseUid }, { teacherFirebaseUid: req.firebaseUid }] };
+    const requests = await TuitionRequest.find(filter).sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
     console.error('Fetch requests error:', err);
@@ -77,11 +91,11 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/requests/:requestId - Update status or assign teacher of a request
-router.put('/:requestId', async (req, res) => {
+// PUT /api/requests/:requestId - Update status or assign teacher of a request (Admin only)
+router.put('/:requestId', requireAdmin, async (req, res) => {
   try {
     const { status, teacherName, teacherContactNumber } = req.body;
-    
+
     let updates = {};
 
     if (status) {
@@ -111,12 +125,16 @@ router.put('/:requestId', async (req, res) => {
   }
 });
 
-// GET /api/requests/:requestId - Fetch a single tuition request
-router.get('/:requestId', async (req, res) => {
+// GET /api/requests/:requestId - Fetch a single tuition request (admin or a party to it)
+router.get('/:requestId', requireUserOrAdmin, async (req, res) => {
   try {
     const request = await TuitionRequest.findById(req.params.requestId);
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
+    }
+    const isParty = [request.studentFirebaseUid, request.teacherFirebaseUid].includes(req.firebaseUid);
+    if (!req.isAdmin && !isParty) {
+      return res.status(403).json({ error: 'You do not have access to this request.' });
     }
     res.json(request);
   } catch (err) {
@@ -126,13 +144,11 @@ router.get('/:requestId', async (req, res) => {
 });
 
 // PUT /api/requests/:requestId/confirm - Teacher or Student confirm tuition
-router.put('/:requestId/confirm', async (req, res) => {
+// The confirmer's role is derived from the logged-in user, not trusted from the body.
+router.put('/:requestId/confirm', requireUser, async (req, res) => {
   try {
-    const { confirmerRole, confirmation } = req.body;
-    
-    if (!['teacher', 'student'].includes(confirmerRole)) {
-      return res.status(400).json({ error: 'Invalid confirmerRole. Must be teacher or student.' });
-    }
+    const { confirmation } = req.body;
+
     if (!['yes', 'no'].includes(confirmation)) {
       return res.status(400).json({ error: 'Invalid confirmation. Must be yes or no.' });
     }
@@ -142,10 +158,12 @@ router.put('/:requestId/confirm', async (req, res) => {
       return res.status(404).json({ error: 'Request not found' });
     }
 
-    if (confirmerRole === 'teacher') {
+    if (req.firebaseUid === request.teacherFirebaseUid) {
       request.teacherConfirmation = confirmation;
-    } else if (confirmerRole === 'student') {
+    } else if (req.firebaseUid === request.studentFirebaseUid) {
       request.studentConfirmation = confirmation;
+    } else {
+      return res.status(403).json({ error: 'You are not part of this tuition request.' });
     }
 
     // Logic checks
@@ -166,7 +184,7 @@ router.put('/:requestId/confirm', async (req, res) => {
 });
 
 // PUT /api/requests/:requestId/payment - Update fee, commission, and payment status (Admin only)
-router.put('/:requestId/payment', async (req, res) => {
+router.put('/:requestId/payment', requireAdmin, async (req, res) => {
   try {
     const { feeAmount, commissionAmount, paymentStatus } = req.body;
 
@@ -180,7 +198,7 @@ router.put('/:requestId/payment', async (req, res) => {
       if (commissionAmount !== undefined) {
         request.commissionAmount = commissionAmount;
       } else {
-        request.commissionAmount = feeAmount * 0.2;
+        request.commissionAmount = Math.round(feeAmount * COMMISSION_RATE);
       }
     } else if (commissionAmount !== undefined) {
         request.commissionAmount = commissionAmount;

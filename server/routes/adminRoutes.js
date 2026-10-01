@@ -1,18 +1,52 @@
 const express = require('express');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const User = require('../models/User');
 const TuitionRequest = require('../models/TuitionRequest');
+const { requireAdmin, signAdminToken } = require('../middleware/auth');
 
-// POST /api/admin/login - Simple password check
-router.post('/login', (req, res) => {
+// Max 10 login attempts per IP every 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: { error: 'Too many login attempts. Please try again after 15 minutes.' },
+});
+
+// Constant-time string comparison to avoid timing attacks
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
+
+// POST /api/admin/login - Check password and issue a signed admin token
+router.post('/login', loginLimiter, (req, res) => {
   const { password } = req.body;
-  if (!process.env.ADMIN_PASSWORD) {
-    return res.status(500).json({ error: 'Server configuration error: ADMIN_PASSWORD not set.' });
+  if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_JWT_SECRET) {
+    return res.status(500).json({ error: 'Server configuration error: ADMIN_PASSWORD or ADMIN_JWT_SECRET not set.' });
   }
-  if (password === process.env.ADMIN_PASSWORD) {
-    res.json({ success: true });
+  if (password && safeEqual(password, process.env.ADMIN_PASSWORD)) {
+    res.json({ success: true, token: signAdminToken() });
   } else {
     res.status(401).json({ error: 'Invalid password.' });
+  }
+});
+
+// Every admin route below requires a valid admin token
+router.use(requireAdmin);
+
+// GET /api/admin/teachers - Complete teacher profiles, including contact numbers
+router.get('/teachers', async (req, res) => {
+  try {
+    const teachers = await User.find(
+      { role: 'teacher', 'teacherProfile.isProfileComplete': true },
+      { firebaseUid: 1, name: 1, email: 1, phone: 1, teacherProfile: 1 }
+    ).lean();
+    res.json(teachers);
+  } catch (err) {
+    console.error('Admin fetch teachers error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

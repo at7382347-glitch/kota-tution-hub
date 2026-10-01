@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
+import { API_BASE, setAdminToken } from '../api';
 
 function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ function AdminLogin() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          localStorage.setItem('adminLoggedIn', 'true');
+          setAdminToken(data.token);
           navigate('/admin/dashboard');
         } else {
           setError('Invalid password.');

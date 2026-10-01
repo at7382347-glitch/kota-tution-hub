@@ -5,6 +5,7 @@ const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const User = require('../models/User');
 const TuitionRequest = require('../models/TuitionRequest');
+const { requireUser, requireAdmin, requireUserOrAdmin, requireSelf } = require('../middleware/auth');
 
 // Cloudinary config - reads CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET
 cloudinary.config({
@@ -47,21 +48,30 @@ const upload = multer({
 });
 
 // POST /api/users/sync - Create or update a user
-router.post('/sync', async (req, res) => {
+// The role is locked after the first sync: an existing user keeps their role and profile name.
+router.post('/sync', requireUser, async (req, res) => {
   try {
-    const { firebaseUid, name, email, phone, photoURL, role } = req.body;
+    const firebaseUid = req.firebaseUid;
+    const { name, email, phone, photoURL, role } = req.body;
 
-    if (!firebaseUid || !role) {
-      return res.status(400).json({ error: 'firebaseUid and role are required.' });
+    const existingUser = await User.findOne({ firebaseUid });
+    if (existingUser) {
+      existingUser.email = email || existingUser.email;
+      existingUser.phone = phone || existingUser.phone;
+      existingUser.photoURL = photoURL || existingUser.photoURL;
+      if (!existingUser.name && name) existingUser.name = name;
+      await existingUser.save();
+      console.log(`User signed in: ${firebaseUid} (${existingUser.role})`);
+      return res.json(existingUser);
     }
 
-    const user = await User.findOneAndUpdate(
-      { firebaseUid },
-      { name, email, phone, photoURL, role },
-      { new: true, upsert: true, runValidators: true }
-    );
+    if (!['student', 'teacher'].includes(role)) {
+      return res.status(400).json({ error: 'A valid role (student or teacher) is required.' });
+    }
 
-    console.log(`User synced: ${user.name || user.phone} (${user.role})`);
+    const user = await User.create({ firebaseUid, name, email, phone, photoURL, role });
+
+    console.log(`User registered: ${firebaseUid} (${user.role})`);
     res.json(user);
   } catch (err) {
     console.error('User sync error:', err);
@@ -69,7 +79,7 @@ router.post('/sync', async (req, res) => {
   }
 });
 
-// GET /api/users/teachers - Fetch all teachers with complete profiles (public listing)
+// GET /api/users/teachers - Fetch all teachers with complete profiles (public listing, no contact info)
 router.get('/teachers', async (req, res) => {
   try {
     const teachers = await User.find(
@@ -77,7 +87,6 @@ router.get('/teachers', async (req, res) => {
       {
         firebaseUid: 1,
         name: 1,
-        'teacherProfile.contactNumber': 1,
         'teacherProfile.subjects': 1,
         'teacherProfile.classLevels': 1,
         'teacherProfile.qualification': 1,
@@ -99,7 +108,7 @@ router.get('/teachers', async (req, res) => {
 });
 
 // GET /api/users/students - Fetch all students with complete requirements (admin listing)
-router.get('/students', async (req, res) => {
+router.get('/students', requireAdmin, async (req, res) => {
   try {
     const students = await User.find(
       { role: 'student', 'studentRequirement.isRequirementComplete': true },
@@ -127,11 +136,16 @@ router.get('/students', async (req, res) => {
 // PUT /api/users/:firebaseUid/teacher-profile - Update teacher profile (multipart/form-data)
 // IMPORTANT: This must be defined BEFORE the generic GET /:firebaseUid route,
 // otherwise Express 5 treats "uid/teacher-profile" as a single :firebaseUid param.
-router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async (req, res) => {
+router.put('/:firebaseUid/teacher-profile', requireUser, requireSelf, upload.single('profilePhoto'), async (req, res) => {
   try {
-    console.log('[PUT teacher-profile] Params:', req.params);
-    console.log('[PUT teacher-profile] Body keys:', Object.keys(req.body));
-    console.log('[PUT teacher-profile] File:', req.file ? req.file.originalname : 'none');
+    const existingUser = await User.findOne({ firebaseUid: req.params.firebaseUid });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (existingUser.role !== 'teacher') {
+      return res.status(403).json({ error: 'Only teacher accounts can edit a teacher profile.' });
+    }
+    const existingProfile = existingUser.teacherProfile || {};
 
     const { name, contactNumber, subjects, classLevels, qualification, experience, feePackages, area, mode, bio } = req.body;
 
@@ -142,11 +156,15 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
       classLevels: classLevels ? (Array.isArray(classLevels) ? classLevels : JSON.parse(classLevels)) : [],
       qualification: qualification || '',
       experience: Number(experience) || 0,
-      feePackages: feePackages ? (Array.isArray(feePackages) ? feePackages : JSON.parse(feePackages)) : [],
+      feePackages: feePackages ? (Array.isArray(feePackages) ? feePackages : JSON.parse(feePackages)) : (existingProfile.feePackages || []),
       area: area || '',
       mode: mode || 'offline',
       bio: bio || '',
       isProfileComplete: true,
+      // Ratings are not editable by the teacher; carry them over so a profile edit doesn't wipe them
+      reviews: existingProfile.reviews || [],
+      averageRating: existingProfile.averageRating || 0,
+      totalRatings: existingProfile.totalRatings || 0,
     };
 
     // If a new photo was uploaded, push it to Cloudinary and store the full HTTPS URL
@@ -156,12 +174,9 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
         return res.status(500).json({ error: 'Photo storage is not configured. Please contact support.' });
       }
       profileData.profilePhoto = await uploadToCloudinary(req.file.buffer, req.params.firebaseUid);
-    } else {
+    } else if (existingProfile.profilePhoto) {
       // Keep existing photo if editing without re-uploading
-      const existingUser = await User.findOne({ firebaseUid: req.params.firebaseUid });
-      if (existingUser?.teacherProfile?.profilePhoto) {
-        profileData.profilePhoto = existingUser.teacherProfile.profilePhoto;
-      }
+      profileData.profilePhoto = existingProfile.profilePhoto;
     }
 
     const updateData = { teacherProfile: profileData };
@@ -177,7 +192,7 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    console.log(`Teacher profile updated for: ${user.name || user.firebaseUid}`);
+    console.log(`Teacher profile updated for: ${user.firebaseUid}`);
     res.json(user);
   } catch (err) {
     console.error('Teacher profile update error:', err);
@@ -187,10 +202,15 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
 
 // PUT /api/users/:firebaseUid/student-requirement - Update student requirement (JSON body)
 // Must be defined BEFORE the generic GET /:firebaseUid route
-router.put('/:firebaseUid/student-requirement', async (req, res) => {
+router.put('/:firebaseUid/student-requirement', requireUser, requireSelf, async (req, res) => {
   try {
-    console.log('[PUT student-requirement] Params:', req.params);
-    console.log('[PUT student-requirement] Body:', req.body);
+    const existingUser = await User.findOne({ firebaseUid: req.params.firebaseUid }, { role: 1 });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (existingUser.role !== 'student') {
+      return res.status(403).json({ error: 'Only student accounts can post a tuition requirement.' });
+    }
 
     const { name, contactNumber, subjects, classLevel, budgetPackages, area, additionalNotes, isGroupTuition, groupSize, perStudentFee } = req.body;
 
@@ -266,7 +286,7 @@ router.put('/:firebaseUid/student-requirement', async (req, res) => {
       console.log(`Created new general request for ${user.firebaseUid}`);
     }
 
-    console.log(`Student requirement updated for: ${user.name || user.firebaseUid}`);
+    console.log(`Student requirement updated for: ${user.firebaseUid}`);
     res.json(user);
   } catch (err) {
     console.error('Student requirement update error:', err);
@@ -287,12 +307,12 @@ router.get('/teachers/:firebaseUid', async (req, res) => {
       return res.status(404).json({ error: 'Teacher not found or profile incomplete.' });
     }
 
-    // Return only public-facing fields
+    // Return only public-facing fields (no contact number — students connect via the platform)
+    const { contactNumber, ...publicProfile } = user.teacherProfile;
     res.json({
       firebaseUid: user.firebaseUid,
       name: user.name,
-      contactNumber: user.teacherProfile.contactNumber,
-      teacherProfile: user.teacherProfile,
+      teacherProfile: publicProfile,
     });
   } catch (err) {
     console.error('Fetch teacher profile error:', err);
@@ -301,18 +321,32 @@ router.get('/teachers/:firebaseUid', async (req, res) => {
 });
 
 // POST /api/users/teachers/:firebaseUid/rate - Rate a teacher
-router.post('/teachers/:firebaseUid/rate', async (req, res) => {
+// Only a student whose tuition with this teacher was converted can rate them.
+router.post('/teachers/:firebaseUid/rate', requireUser, async (req, res) => {
   try {
-    const { studentId, studentName, rating, comment } = req.body;
+    const { rating, comment } = req.body;
     const teacherUid = req.params.firebaseUid;
+    const studentId = req.firebaseUid;
 
-    if (!studentId || !rating) {
-      return res.status(400).json({ error: 'Student ID and rating are required.' });
+    if (!rating) {
+      return res.status(400).json({ error: 'Rating is required.' });
     }
 
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
     }
+
+    const convertedTuition = await TuitionRequest.exists({
+      studentFirebaseUid: studentId,
+      teacherFirebaseUid: teacherUid,
+      demoStatus: 'converted',
+    });
+    if (!convertedTuition) {
+      return res.status(403).json({ error: 'You can rate a teacher only after your tuition with them is confirmed.' });
+    }
+
+    const student = await User.findOne({ firebaseUid: studentId }, { name: 1 });
+    const studentName = student?.name;
 
     const teacher = await User.findOne({ firebaseUid: teacherUid, role: 'teacher' });
     if (!teacher || !teacher.teacherProfile) {
@@ -364,7 +398,7 @@ router.post('/teachers/:firebaseUid/rate', async (req, res) => {
 
 // GET /api/users/:firebaseUid - Fetch a user by firebaseUid
 // This generic param route must come AFTER more-specific routes like /:firebaseUid/teacher-profile
-router.get('/:firebaseUid', async (req, res) => {
+router.get('/:firebaseUid', requireUserOrAdmin, requireSelf, async (req, res) => {
   try {
     const user = await User.findOne({ firebaseUid: req.params.firebaseUid });
 

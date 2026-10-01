@@ -14,16 +14,10 @@ function ProtectedRoute({ children }) {
   const location = useLocation();
 
   useEffect(() => {
-    console.log('[ProtectedRoute] Component mounted, checking auth state...');
-    
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      console.log('[ProtectedRoute] Auth state changed!');
-      console.log('[ProtectedRoute] firebaseUser:', firebaseUser ? `Logged in as: ${firebaseUser.email || firebaseUser.phoneNumber}` : 'NULL (Logged out)');
-      
       setUser(firebaseUser);
       setChecking(false);
     });
-    
     return () => unsubscribe();
   }, []);
 
