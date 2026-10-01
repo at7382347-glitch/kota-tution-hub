@@ -1,25 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { API_BASE, apiFetch } from '../api';
-
-// Build a loadable image URL from the teacher object.
-// - Full http(s) URLs (Cloudinary) are returned as-is.
-// - Legacy relative paths (/uploads/...) are resolved against VITE_API_URL.
-// - Returns null when there is no photo, so the card shows the initial instead.
-function resolveTeacherPhotoUrl(teacher) {
-  const raw = teacher?.teacherProfile?.profilePhoto || teacher?.photoURL || '';
-
-  if (typeof raw !== 'string') return null;
-  const url = raw.trim();
-  if (!url) return null;
-
-  if (/^https?:\/\//i.test(url)) return url;
-  if (!API_BASE) return null;
-
-  return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`;
-}
+import { apiFetch } from '../api';
+import { resolveTeacherPhotoUrl } from '../utils/teacherPhoto';
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
@@ -35,9 +19,14 @@ function BrowseTeachers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filters
-  const [subjectFilters, setSubjectFilters] = useState([]);
-  const [classFilters, setClassFilters] = useState([]);
+  // Filters — pre-filled from ?subject=...&class=... (e.g. the Home page search)
+  const [searchParams] = useSearchParams();
+  const [subjectFilters, setSubjectFilters] = useState(() =>
+    searchParams.getAll('subject').filter((s) => SUBJECT_OPTIONS.includes(s))
+  );
+  const [classFilters, setClassFilters] = useState(() =>
+    searchParams.getAll('class').filter((c) => CLASS_OPTIONS.includes(c))
+  );
 
   // Fetch all teachers on mount
   useEffect(() => {

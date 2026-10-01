@@ -1,298 +1,762 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { apiFetch } from '../api';
+import { resolveTeacherPhotoUrl } from '../utils/teacherPhoto';
+import useReveal from '../hooks/useReveal';
+import Logo from '../components/Logo';
+
+/* ─── Content ─────────────────────────────────────────────────────── */
+
+const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
+const CLASSES = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
+
+const CONTACTS = [
+  { name: 'Ankur Yadav', tel: '+919536783342', display: '+91 95367 83342' },
+  { name: 'Sanskar Thakur', tel: '+916206105858', display: '+91 62061 05858' },
+];
+
+const WHATSAPP_URL = `https://wa.me/919536783342?text=${encodeURIComponent(
+  'Hi, I am looking for a home tutor in Kota.'
+)}`;
+
+const STEPS = [
+  {
+    title: 'Tell us what you need',
+    text: 'Share the class, subjects and your locality — or browse tutor profiles yourself.',
+  },
+  {
+    title: 'We shortlist a tutor',
+    text: 'Our team calls you, understands your child’s level and matches an interviewed tutor near you.',
+  },
+  {
+    title: 'Free demo class at home',
+    text: 'The tutor visits for a demo. No charge, no commitment.',
+  },
+  {
+    title: 'Regular classes begin',
+    text: 'One-on-one, one hour a day, at your home — on a schedule that suits your family.',
+  },
+  {
+    title: 'Pay monthly, at home',
+    text: 'No online payments. Our team collects the fee at your home each month.',
+  },
+];
+
+const PROMISES = [
+  {
+    title: 'Every tutor is interviewed',
+    text: 'Before anyone joins, our team interviews them personally — subject depth, teaching style, and how they explain to a student who is stuck.',
+  },
+  {
+    title: 'One team, one point of contact',
+    text: 'Scheduling, fees, feedback, changes — you speak to us, not a call centre. We stay involved after the first class.',
+  },
+  {
+    title: 'No sudden gaps in learning',
+    text: 'Tutors must give 15 days’ notice before leaving, so we always have time to arrange a replacement.',
+  },
+  {
+    title: 'Study together, pay less',
+    text: 'Up to three students can share one tutor and split the monthly fee — ideal for siblings or friends.',
+  },
+];
+
+const PLANS = [
+  { name: 'Foundation', classes: 'Class 6 – 8', price: '7,500', note: 'Strong basics in every subject.' },
+  { name: 'Boards', classes: 'Class 9 – 12', price: '8,500', note: 'School and board exam preparation.' },
+  { name: 'JEE / NEET', classes: 'Class 9 – 12 & Droppers', price: '10,000', note: 'Competitive exam coaching at home.' },
+];
+
+const AREAS = [
+  'Talwandi', 'Vigyan Nagar', 'Mahaveer Nagar', 'Kunhadi', 'Landmark City', 'Rajeev Gandhi Nagar',
+  'Indra Vihar', 'Jawahar Nagar', 'Dadabari', 'Borkhera', 'Coral Park', 'Shrinath Puram',
+];
+
+const FAQS = [
+  {
+    q: 'Is the demo class really free?',
+    a: 'Yes. The first demo class at your home is completely free, and there is no obligation to continue.',
+  },
+  {
+    q: 'How do I pay the fees?',
+    a: 'Fees are paid monthly. A member of our team collects the fee at your home — there is no online payment involved.',
+  },
+  {
+    q: 'How do you verify tutors?',
+    a: 'Every tutor is interviewed by our team before joining. We check subject knowledge, teaching approach and experience.',
+  },
+  {
+    q: 'What if we don’t like the tutor?',
+    a: 'Tell us after the demo or at any time. We will arrange a demo with a different tutor.',
+  },
+  {
+    q: 'Can we contact the tutor directly?',
+    a: 'All coordination happens through our team. This keeps scheduling, fees and accountability in one place.',
+  },
+  {
+    q: 'Do you offer group tuition?',
+    a: 'Yes. Up to three students can study together with one tutor and split the monthly fee.',
+  },
+];
+
+/* ─── Small pieces ────────────────────────────────────────────────── */
+
+// Tutors type their area freely (often a long list) — show the first locality only.
+function areaLabel(area) {
+  const first = String(area || '')
+    .split(/[,/|]/)
+    .map((s) => s.trim())
+    .find((s) => s && s.toLowerCase() !== 'kota');
+  if (!first) return 'Kota';
+  const pretty = first.replace(/\b\w/g, (c) => c.toUpperCase());
+  return `${pretty}, Kota`;
+}
+
+// Shows the tutor's initial underneath; the photo fades in on top only once it has loaded,
+// so a missing or slow photo never flashes a broken-image icon.
+function TutorAvatar({ teacher, className }) {
+  const [status, setStatus] = useState('loading'); // loading | loaded | failed
+  const url = resolveTeacherPhotoUrl(teacher);
+  const initial = (teacher.name || 'T').trim().charAt(0).toUpperCase();
+
+  return (
+    <div className={`relative flex items-center justify-center overflow-hidden bg-marigold/20 font-display font-bold text-marigold ${className}`}>
+      {initial}
+      {url && status !== 'failed' && (
+        <img
+          src={url}
+          alt={`${teacher.name || 'Tutor'}, home tutor in Kota`}
+          loading="lazy"
+          onLoad={() => setStatus('loaded')}
+          onError={() => setStatus('failed')}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            status === 'loaded' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+    </div>
+  );
+}
+
+function Stars({ value }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-body text-xs font-semibold text-ink">
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 text-marigold" fill="currentColor" aria-hidden="true">
+        <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9L10 1.5z" />
+      </svg>
+      {Number(value).toFixed(1)}
+    </span>
+  );
+}
+
+function TutorCard({ teacher, compact = false }) {
+  const p = teacher.teacherProfile || {};
+  return (
+    <Link
+      to={`/teacher/${teacher.firebaseUid}`}
+      className={`group block rounded-2xl border border-ink/10 bg-white p-4 shadow-[0_1px_2px_rgba(31,42,68,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_12px_32px_-12px_rgba(31,42,68,0.25)] ${
+        compact ? '' : 'h-full'
+      }`}
+    >
+      <div className="flex items-center gap-3.5">
+        <TutorAvatar teacher={teacher} className="h-14 w-14 flex-shrink-0 rounded-xl text-xl" />
+        <div className="min-w-0">
+          <p className="truncate font-display text-base font-semibold text-ink">{teacher.name || 'Tutor'}</p>
+          <p className="truncate font-body text-xs text-ink/55">
+            {(p.subjects || []).join(' · ') || 'Multiple subjects'}
+          </p>
+          <div className="mt-1 flex items-center gap-2.5 font-body text-xs text-ink/55">
+            {p.experience > 0 && <span>{p.experience} yrs exp.</span>}
+            {p.averageRating > 0 && <Stars value={p.averageRating} />}
+          </div>
+        </div>
+      </div>
+      {!compact && (
+        <>
+          {p.qualification && (
+            <p className="mt-4 line-clamp-1 font-body text-sm text-ink/70">{p.qualification}</p>
+          )}
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink/5 pt-3 font-body text-xs">
+            <span className="min-w-0 truncate text-ink/50" title={p.area || 'Kota'}>
+              {areaLabel(p.area)}
+            </span>
+            <span className="flex-shrink-0 font-semibold text-ink transition-colors group-hover:text-marigold">
+              View profile →
+            </span>
+          </div>
+        </>
+      )}
+    </Link>
+  );
+}
+
+function SectionLabel({ children, light = false }) {
+  return (
+    <p className={`flex items-center gap-3 font-body text-xs font-semibold uppercase tracking-[0.18em] ${light ? 'text-marigold' : 'text-ink/50'}`}>
+      <span className="h-px w-8 bg-marigold" />
+      {children}
+    </p>
+  );
+}
+
+/* ─── Page ────────────────────────────────────────────────────────── */
 
 function Home() {
+  const navigate = useNavigate();
+  const [teachers, setTeachers] = useState([]);
+  const [teachersLoaded, setTeachersLoaded] = useState(false);
+  const [searchClass, setSearchClass] = useState('');
+  const [searchSubject, setSearchSubject] = useState('');
+
+  useReveal([teachersLoaded]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch('/api/users/teachers')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data)) return;
+        // Tutors with a working (Cloudinary) photo first, then by rating and experience
+        const score = (t) => {
+          const p = t.teacherProfile || {};
+          const hasPhoto = /^https?:\/\//.test(p.profilePhoto || '') ? 1 : 0;
+          return hasPhoto * 1000 + (p.averageRating || 0) * 10 + (p.experience || 0);
+        };
+        setTeachers([...data].sort((a, b) => score(b) - score(a)));
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setTeachersLoaded(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchSubject) params.append('subject', searchSubject);
+    if (searchClass) params.append('class', searchClass);
+    const qs = params.toString();
+    navigate(`/browse-teachers${qs ? `?${qs}` : ''}`);
+  };
+
+  const heroTeachers = teachers.slice(0, 3);
+  const railTeachers = teachers.slice(0, 8);
+  const tutorCount = teachers.length;
+
+  const selectClass =
+    'w-full appearance-none rounded-xl border border-ink/10 bg-sandstone/40 px-4 py-3.5 pr-10 font-body text-sm text-ink focus:border-marigold focus:outline-none focus:ring-2 focus:ring-marigold/30';
+
   return (
-    <div className="bg-sandstone min-h-screen overflow-x-hidden">
+    <div className="overflow-x-hidden bg-sandstone">
       <Helmet>
-        <title>Kota Tuition Hub - Find the Best Home Tutors in Kota, Rajasthan</title>
-        <meta name="description" content="Kota Tuition Hub — Find the best home tutors in Kota, Rajasthan for IIT-JEE, NEET, and board exam preparation." />
-        <meta property="og:title" content="Kota Tuition Hub - Find the Best Home Tutors in Kota, Rajasthan" />
-        <meta property="og:description" content="Kota Tuition Hub — Find the best home tutors in Kota, Rajasthan for IIT-JEE, NEET, and board exam preparation." />
+        <title>Home Tutors in Kota for JEE, NEET &amp; Boards | Nexve — Kota Tuition Hub</title>
+        <meta
+          name="description"
+          content="Interviewed home tutors across Kota, Rajasthan for Class 6–12, JEE, NEET and droppers. Free demo class at home. Fees collected monthly at your doorstep."
+        />
+        <meta property="og:title" content="Home Tutors in Kota for JEE, NEET & Boards | Nexve — Kota Tuition Hub" />
+        <meta
+          property="og:description"
+          content="Interviewed home tutors across Kota for Class 6–12, JEE, NEET and droppers. Free demo class at home."
+        />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_IN" />
       </Helmet>
+
       <main>
-        {/* ── Hero Section ─────────────────────────────────────────── */}
-        <section 
-        className="relative overflow-hidden px-4 sm:px-6 md:px-8 lg:px-24 pt-20 pb-28 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop')" }}
-      >
-        {/* Dark overlay for text contrast */}
-        <div className="absolute inset-0 bg-ink/80 sm:bg-ink/70 bg-gradient-to-b from-ink/90 to-ink/60"></div>
-        
-        {/* Subtle decorative circle */}
-        <div className="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-marigold/10" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-sage/10" />
+        {/* ── Hero ───────────────────────────────────────────────── */}
+        <section className="relative px-4 pb-20 pt-10 sm:px-6 sm:pt-16 lg:pb-28">
+          {/* Faint grid texture */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.35]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(31,42,68,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(31,42,68,0.06) 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+              maskImage: 'radial-gradient(ellipse at 30% 20%, black 20%, transparent 70%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at 30% 20%, black 20%, transparent 70%)',
+            }}
+          />
 
-        <div className="relative mx-auto max-w-4xl text-center sm:text-left">
-          <p className="font-body mb-4 inline-block rounded-full bg-marigold/15 border border-marigold/20 px-4 py-1.5 text-sm font-medium tracking-wide text-sandstone/90">
-            Connecting Kota's students with verified tutors
-          </p>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <div className="rise">
+                <SectionLabel>Home tuition · Kota, Rajasthan</SectionLabel>
+              </div>
 
-          <h1 className="font-display text-sandstone text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
-            Find the Best Home Tutors
-            <span className="block text-marigold">in Kota, Rajasthan</span>
-          </h1>
-
-          <p className="font-body text-sandstone/80 mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg md:text-xl">
-            Whether you're preparing for IIT-JEE, NEET, or board exams — connect
-            with experienced, verified home tutors right in your neighbourhood.
-          </p>
-
-          <p className="font-body text-sandstone/60 mx-auto mt-4 max-w-lg text-sm italic leading-relaxed sm:text-base">
-            Your personal tutor, guiding you one-on-one — because every student learns differently.
-          </p>
-
-          <div className="mt-10 flex flex-col items-center sm:items-start justify-center sm:justify-start gap-4 sm:flex-row">
-            <Link
-              to="/browse-teachers"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-marigold px-8 py-3.5 text-base font-semibold text-ink shadow-lg shadow-marigold/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-marigold/90 hover:shadow-xl hover:shadow-marigold/30 active:translate-y-0 sm:w-auto sm:text-lg"
-            >
-              Browse Teachers
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </Link>
-            <Link
-              to="/login"
-              className="font-body inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-sandstone/30 bg-sandstone/5 backdrop-blur-sm px-8 py-3.5 text-base font-semibold text-sandstone transition-all duration-200 hover:bg-sandstone/10 hover:border-sandstone/50 sm:w-auto sm:text-lg"
-            >
-              I'm a Teacher
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Trust Banner ─────────────────────────────────────────── */}
-      <section className="border-y border-ink/10 bg-ink/[0.03] px-4 sm:px-6 md:px-8 lg:px-24 py-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="font-display text-lg sm:text-xl font-medium text-ink/80">
-            A new platform built to connect Kota's students with genuinely verified, experienced tutors.
-          </p>
-        </div>
-      </section>
-
-      {/* ── How It Works ─────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 md:px-8 lg:px-24 py-20">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="font-display text-ink text-center text-2xl font-bold sm:text-3xl md:text-4xl">
-            How It Works
-          </h2>
-          <p className="font-body text-ink/60 mx-auto mt-3 max-w-xl text-center text-base sm:text-lg">
-            Three simple steps to find your perfect tutor
-          </p>
-
-          <div className="mt-14 grid gap-10 grid-cols-1 md:grid-cols-3">
-            {[
-              {
-                step: '01',
-                title: 'Post Your Requirement',
-                desc: 'Tell us the subject, class, preferred timings, and your area in Kota.',
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                ),
-              },
-              {
-                step: '02',
-                title: 'Get Matched',
-                desc: 'We connect you with verified, experienced tutors who fit your needs.',
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                ),
-              },
-              {
-                step: '03',
-                title: 'Start Learning',
-                desc: 'Take a free demo class. If you\'re happy, begin regular sessions.',
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                ),
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="group relative rounded-2xl border border-ink/8 bg-white/60 p-8 backdrop-blur-sm transition-all duration-300 hover:border-marigold/30 hover:shadow-lg hover:shadow-marigold/10 hover:-translate-y-1"
+              <h1
+                className="rise mt-6 font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-[4.1rem]"
+                style={{ animationDelay: '80ms' }}
               >
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-marigold/15 text-marigold transition-colors duration-300 group-hover:bg-marigold group-hover:text-ink">
-                  {item.icon}
+                Kota’s home tutors,{' '}
+                <span className="relative whitespace-nowrap">
+                  <span className="relative z-10">handpicked</span>
+                  <span className="absolute inset-x-0 bottom-1 z-0 h-3 bg-marigold/50 sm:bottom-2 sm:h-4" />
+                </span>{' '}
+                for your child.
+              </h1>
+
+              <p
+                className="rise mt-6 max-w-xl font-body text-base leading-relaxed text-ink/65 sm:text-lg"
+                style={{ animationDelay: '160ms' }}
+              >
+                Every tutor is personally interviewed by our team. Book a free demo class at home for
+                Class 6 to 12, JEE, NEET and droppers — we take care of everything after that.
+              </p>
+
+              {/* Search */}
+              <form
+                onSubmit={handleSearch}
+                className="rise mt-9 grid gap-2.5 rounded-2xl border border-ink/10 bg-white p-2.5 shadow-[0_20px_50px_-24px_rgba(31,42,68,0.35)] sm:grid-cols-[1fr_1fr_auto]"
+                style={{ animationDelay: '240ms' }}
+              >
+                <label className="relative">
+                  <span className="sr-only">Class</span>
+                  <select value={searchClass} onChange={(e) => setSearchClass(e.target.value)} className={selectClass}>
+                    <option value="">Any class</option>
+                    {CLASSES.map((c) => (
+                      <option key={c} value={c}>
+                        {c === 'Dropper' ? 'Dropper' : `Class ${c}`}
+                      </option>
+                    ))}
+                  </select>
+                  <Chevron />
+                </label>
+                <label className="relative">
+                  <span className="sr-only">Subject</span>
+                  <select value={searchSubject} onChange={(e) => setSearchSubject(e.target.value)} className={selectClass}>
+                    <option value="">Any subject</option>
+                    {SUBJECTS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <Chevron />
+                </label>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-ink px-7 py-3.5 font-body text-sm font-semibold text-sandstone transition-colors hover:bg-ink/90"
+                >
+                  Find tutors
+                </button>
+              </form>
+
+              <ul
+                className="rise mt-6 flex flex-wrap gap-x-6 gap-y-2 font-body text-sm text-ink/60"
+                style={{ animationDelay: '320ms' }}
+              >
+                {['Free demo class', 'Interview-verified tutors', 'Fees collected at home'].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 text-sage" fill="currentColor" aria-hidden="true">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Live tutor stack */}
+            <div className="rise lg:col-span-5" style={{ animationDelay: '200ms' }}>
+              <div className="relative mx-auto max-w-sm lg:max-w-none">
+                <div className="relative rounded-[1.75rem] bg-ink p-5 shadow-[0_30px_60px_-30px_rgba(31,42,68,0.6)] sm:p-6">
+                  <div className="mb-5 flex items-center justify-between">
+                    <p className="font-body text-xs font-semibold uppercase tracking-[0.18em] text-sandstone/50">
+                      Tutors on Nexve
+                    </p>
+                    <span className="flex items-center gap-2 font-body text-xs text-sandstone/60">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-sage" />
+                      </span>
+                      Accepting students
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {!teachersLoaded &&
+                      [0, 1, 2].map((i) => <div key={i} className="h-[86px] animate-pulse rounded-2xl bg-sandstone/10" />)}
+                    {teachersLoaded &&
+                      heroTeachers.map((t, i) => (
+                        <div key={t.firebaseUid} style={{ marginLeft: `${i * 14}px`, marginRight: `${(2 - i) * 14}px` }}>
+                          <TutorCard teacher={t} compact />
+                        </div>
+                      ))}
+                    {teachersLoaded && heroTeachers.length === 0 && (
+                      <p className="rounded-2xl bg-sandstone/10 p-6 text-center font-body text-sm text-sandstone/70">
+                        Tutor profiles are being updated. Call us and we’ll match you personally.
+                      </p>
+                    )}
+                  </div>
+
+                  <Link
+                    to="/browse-teachers"
+                    className="mt-5 flex items-center justify-between rounded-xl border border-sandstone/15 px-4 py-3 font-body text-sm font-semibold text-sandstone transition-colors hover:border-marigold hover:text-marigold"
+                  >
+                    {tutorCount > 0 ? `See all ${tutorCount} tutors` : 'Browse tutors'}
+                    <span aria-hidden="true">→</span>
+                  </Link>
                 </div>
-                <span className="font-mono text-xs font-medium tracking-widest text-ink/30">
-                  STEP {item.step}
-                </span>
-                <h3 className="font-display text-ink mt-2 text-lg font-semibold sm:text-xl">
-                  {item.title}
-                </h3>
-                <p className="font-body text-ink/60 mt-2 leading-relaxed">
-                  {item.desc}
-                </p>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Subjects We Cover ────────────────────────────────────── */}
-      <section className="bg-ink/5 border-y border-ink/8 px-4 sm:px-6 md:px-8 lg:px-24 py-20">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="font-display text-ink text-center text-2xl font-bold sm:text-3xl md:text-4xl">
-            Subjects We Cover
-          </h2>
-          <p className="font-body mx-auto mt-3 max-w-xl text-center text-base text-ink/60 sm:text-lg">
-            From school boards to competitive exams
-          </p>
-
-          <div className="mt-12 flex flex-wrap justify-center gap-3">
+        {/* ── Facts strip ────────────────────────────────────────── */}
+        <section className="border-y border-ink/10 bg-white/50 px-4 sm:px-6">
+          <dl className="mx-auto grid max-w-6xl grid-cols-2 lg:grid-cols-4">
             {[
-              'Physics', 'Chemistry', 'Mathematics', 'Biology',
-              'English', 'Hindi', 'Social Science', 'Computer Science',
-              'IIT-JEE Prep', 'NEET Prep', 'Board Exams', 'Olympiads',
-            ].map((subject, i) => (
-              <span
-                key={subject}
-                className={`font-body rounded-full px-5 py-2 text-sm font-medium transition-colors duration-200 cursor-default ${
-                  i === 7
-                    ? 'bg-marigold text-ink border border-marigold shadow-sm shadow-marigold/20'
-                    : 'bg-white text-ink/70 border border-ink/12 hover:border-marigold/40 hover:bg-marigold/10 hover:text-marigold'
-                }`}
-              >
-                {subject}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing Teaser ───────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 md:px-8 lg:px-24 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-ink text-2xl font-bold sm:text-3xl md:text-4xl">
-            Affordable &amp; Transparent Pricing
-          </h2>
-          <p className="font-body text-ink/60 mx-auto mt-3 max-w-xl text-base sm:text-lg">
-            No hidden fees. Start with a free demo class, then pay securely through Kota Tuition Hub.
-          </p>
-
-          <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
-            {[
-              { title: 'Foundation (Class 6-8)', price: 'From ₹7,500', period: '/month', desc: 'Build a strong academic base.' },
-              { title: 'Board Exams (Class 9-12)', price: 'From ₹8,500', period: '/month', desc: 'Score high with expert guidance.' },
-              { title: 'JEE / NEET Prep', price: 'From ₹12,000', period: '/month', desc: 'Advanced coaching & dropper batches.' },
-            ].map((tier) => (
+              { k: tutorCount > 0 ? `${tutorCount}+` : '—', v: 'Interviewed tutors' },
+              { k: '6 – 12', v: 'Every class, plus droppers' },
+              { k: '₹0', v: 'For your demo class' },
+              { k: '1 : 1', v: 'One hour a day, at home' },
+            ].map((f, i) => (
               <div
-                key={tier.title}
-                className="rounded-2xl border border-ink/8 bg-white/60 p-6 backdrop-blur-sm flex flex-col"
+                key={f.v}
+                className={`reveal px-2 py-8 sm:px-6 ${i % 2 === 1 ? 'border-l border-ink/10' : ''} ${
+                  i >= 2 ? 'border-t border-ink/10 lg:border-t-0' : ''
+                } ${i === 2 ? 'lg:border-l' : ''}`}
+                style={{ transitionDelay: `${i * 70}ms` }}
               >
-                <h3 className="font-body text-sm font-medium text-ink/50">{tier.title}</h3>
-                <p className="font-mono mt-2 text-2xl font-semibold text-ink sm:text-3xl flex flex-wrap items-baseline gap-x-1">
-                  <span>{tier.price}</span>
-                  <span className="text-base font-normal text-ink/40">{tier.period}</span>
-                </p>
-                <p className="font-body mt-2 text-sm text-ink/60">{tier.desc}</p>
+                <dt className="font-display text-3xl font-bold text-ink sm:text-4xl">{f.k}</dt>
+                <dd className="mt-1 font-body text-sm text-ink/55">{f.v}</dd>
               </div>
             ))}
+          </dl>
+        </section>
+
+        {/* ── Tutors rail ────────────────────────────────────────── */}
+        {railTeachers.length > 0 && (
+          <section className="px-4 py-20 sm:px-6 lg:py-28">
+            <div className="mx-auto max-w-6xl">
+              <div className="reveal flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <SectionLabel>Meet the tutors</SectionLabel>
+                  <h2 className="mt-4 max-w-xl font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                    Real people. Real experience. All in Kota.
+                  </h2>
+                </div>
+                <Link
+                  to="/browse-teachers"
+                  className="font-body text-sm font-semibold text-ink underline decoration-marigold decoration-2 underline-offset-4 hover:text-marigold"
+                >
+                  View all tutors
+                </Link>
+              </div>
+
+              <div className="no-scrollbar -mx-4 mt-10 flex snap-x gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+                {railTeachers.map((t, i) => (
+                  <div
+                    key={t.firebaseUid}
+                    className="reveal w-[78%] flex-shrink-0 snap-start sm:w-auto"
+                    style={{ transitionDelay: `${(i % 4) * 70}ms` }}
+                  >
+                    <TutorCard teacher={t} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── How it works ───────────────────────────────────────── */}
+        <section className="bg-white/60 px-4 py-20 sm:px-6 lg:py-28">
+          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-12">
+            <div className="reveal lg:col-span-4">
+              <div className="lg:sticky lg:top-28">
+                <SectionLabel>How it works</SectionLabel>
+                <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                  From first call to first class in a few days.
+                </h2>
+                <p className="mt-4 font-body text-base leading-relaxed text-ink/60">
+                  You talk to a person, not a form. We stay with you after the tutor starts, too.
+                </p>
+              </div>
+            </div>
+
+            <ol className="relative lg:col-span-7 lg:col-start-6">
+              <span className="absolute bottom-6 left-[1.2rem] top-6 w-px bg-ink/15" aria-hidden="true" />
+              {STEPS.map((s, i) => (
+                <li key={s.title} className="reveal relative flex gap-6 pb-10 last:pb-0" style={{ transitionDelay: `${i * 60}ms` }}>
+                  <span className="relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-ink/15 bg-sandstone font-display text-sm font-bold text-ink">
+                    {i + 1}
+                  </span>
+                  <div className="pt-1.5">
+                    <h3 className="font-display text-xl font-semibold text-ink">{s.title}</h3>
+                    <p className="mt-1.5 font-body leading-relaxed text-ink/60">{s.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
+        </section>
 
-          <p className="font-body mt-6 text-sm text-ink/40">
-            All packages are for offline home tuition. Free demo class included.
-          </p>
-        </div>
-      </section>
+        {/* ── Why us ─────────────────────────────────────────────── */}
+        <section className="bg-ink px-4 py-20 sm:px-6 lg:py-28">
+          <div className="mx-auto max-w-6xl">
+            <div className="reveal max-w-2xl">
+              <SectionLabel light>Why families choose us</SectionLabel>
+              <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-sandstone sm:text-4xl">
+                A tuition service that stays accountable after the demo.
+              </h2>
+            </div>
 
-      {/* ── CTA Banner ───────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 md:px-8 lg:px-24 pb-24">
-        <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-ink to-ink/90 px-6 py-10 text-center sm:px-16 sm:py-14">
-          {/* Maroon accent — used sparingly */}
-          <div className="pointer-events-none absolute -top-10 right-10 h-32 w-32 rounded-full bg-maroon/20 blur-2xl" />
+            <div className="mt-14 grid gap-x-12 gap-y-12 sm:grid-cols-2">
+              {PROMISES.map((p, i) => (
+                <div key={p.title} className="reveal border-t border-sandstone/15 pt-6" style={{ transitionDelay: `${(i % 2) * 80}ms` }}>
+                  <p className="font-display text-sm font-bold text-marigold">0{i + 1}</p>
+                  <h3 className="mt-3 font-display text-2xl font-semibold text-sandstone">{p.title}</h3>
+                  <p className="mt-3 max-w-md font-body leading-relaxed text-sandstone/60">{p.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-          <h2 className="font-display text-2xl font-bold text-sandstone sm:text-3xl md:text-4xl">
-            Ready to Get Started?
-          </h2>
-          <p className="font-body mx-auto mt-4 max-w-lg text-base text-sandstone/70 sm:text-lg">
-            Connect with Kota's best verified home tutors to achieve your academic goals.
-          </p>
-
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              to="/login"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-marigold px-8 py-3.5 text-base font-semibold text-ink shadow-lg shadow-marigold/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-marigold/90 hover:shadow-xl sm:w-auto sm:text-lg"
-            >
-              Get Started — It's Free
-            </Link>
-            <div className="flex flex-col gap-y-3 sm:gap-y-1 mt-4 sm:mt-0 sm:ml-4 w-full sm:w-auto">
-              <a
-                href="tel:+919536783342"
-                aria-label="Call Ankur"
-                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-sm sm:text-base text-sandstone/70 transition-colors hover:text-marigold"
+        {/* ── Pricing ────────────────────────────────────────────── */}
+        <section className="px-4 py-20 sm:px-6 lg:py-28">
+          <div className="mx-auto max-w-6xl">
+            <div className="reveal flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <SectionLabel>Fees</SectionLabel>
+                <h2 className="mt-4 max-w-xl font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                  Simple monthly fees. No registration charges.
+                </h2>
+              </div>
+              <Link
+                to="/fee-structure"
+                className="font-body text-sm font-semibold text-ink underline decoration-marigold decoration-2 underline-offset-4 hover:text-marigold"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                Ankur: +91 9536783342
-              </a>
+                Full fee structure
+              </Link>
+            </div>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              {PLANS.map((plan, i) => (
+                <div
+                  key={plan.name}
+                  className="reveal flex flex-col rounded-2xl border border-ink/10 bg-white p-7 transition-shadow duration-300 hover:shadow-[0_16px_40px_-20px_rgba(31,42,68,0.3)]"
+                  style={{ transitionDelay: `${i * 70}ms` }}
+                >
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-ink/45">{plan.classes}</p>
+                  <h3 className="mt-2 font-display text-2xl font-bold text-ink">{plan.name}</h3>
+                  <p className="mt-6 font-body text-sm text-ink/50">from</p>
+                  <p className="font-display text-4xl font-bold tracking-tight text-ink">
+                    ₹{plan.price}
+                    <span className="ml-1 font-body text-base font-normal text-ink/45">/month</span>
+                  </p>
+                  <p className="mt-4 border-t border-ink/5 pt-4 font-body text-sm text-ink/60">{plan.note}</p>
+                  <p className="mt-1 font-body text-sm text-ink/60">1 hour a day · at your home</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="reveal mt-4 flex flex-col gap-4 rounded-2xl bg-marigold/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+              <div>
+                <p className="font-display text-lg font-semibold text-ink">Group tuition for 2–3 students</p>
+                <p className="mt-1 font-body text-sm text-ink/65">
+                  Siblings or friends can share one tutor and split the monthly fee between them.
+                </p>
+              </div>
               <a
-                href="tel:+916206105858"
-                aria-label="Call Sanskar"
-                className="font-mono inline-flex w-full items-center justify-center sm:justify-start gap-2 text-sm sm:text-base text-sandstone/70 transition-colors hover:text-marigold"
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 rounded-full bg-ink px-6 py-3 text-center font-body text-sm font-semibold text-sandstone transition-colors hover:bg-ink/90"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                Sanskar: +91 6206105858
+                Ask about group fees
               </a>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* ── Areas ──────────────────────────────────────────────── */}
+        <section className="border-y border-ink/10 bg-white/50 px-4 py-20 sm:px-6">
+          <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-12 lg:items-center">
+            <div className="reveal lg:col-span-5">
+              <SectionLabel>Coverage</SectionLabel>
+              <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                Wherever you are in Kota, we’ll find a tutor near you.
+              </h2>
+            </div>
+            <ul className="reveal flex flex-wrap gap-2 lg:col-span-7">
+              {AREAS.map((a) => (
+                <li key={a} className="rounded-full border border-ink/12 bg-sandstone/60 px-4 py-2 font-body text-sm text-ink/75">
+                  {a}
+                </li>
+              ))}
+              <li className="rounded-full bg-ink px-4 py-2 font-body text-sm font-medium text-sandstone">
+                + every other locality
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* ── FAQ ────────────────────────────────────────────────── */}
+        <section className="px-4 py-20 sm:px-6 lg:py-28">
+          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-12">
+            <div className="reveal lg:col-span-4">
+              <SectionLabel>Questions</SectionLabel>
+              <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                Things parents usually ask.
+              </h2>
+              <p className="mt-4 font-body text-ink/60">
+                Something else on your mind?{' '}
+                <a href={`tel:${CONTACTS[0].tel}`} className="font-semibold text-ink underline decoration-marigold decoration-2 underline-offset-4">
+                  Give us a call
+                </a>
+                .
+              </p>
+            </div>
+            <div className="reveal divide-y divide-ink/10 border-y border-ink/10 lg:col-span-8">
+              {FAQS.map((f) => (
+                <details key={f.q} className="group py-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 font-display text-lg font-semibold text-ink [&::-webkit-details-marker]:hidden">
+                    {f.q}
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink/60 transition-transform duration-300 group-open:rotate-45">
+                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                        <path d="M10 4v12M4 10h12" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl pr-12 font-body leading-relaxed text-ink/65">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final CTA ──────────────────────────────────────────── */}
+        <section className="px-4 pb-20 sm:px-6 lg:pb-28">
+          <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-ink px-6 py-14 sm:px-14 sm:py-16">
+            <svg
+              viewBox="0 0 200 200"
+              className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 opacity-[0.07] sm:h-80 sm:w-80"
+              aria-hidden="true"
+            >
+              <path d="M40 160V40M160 40v120" stroke="#F2ECDD" strokeWidth="18" strokeLinecap="round" fill="none" />
+              <path d="M40 40l120 120" stroke="#E8A33D" strokeWidth="18" strokeLinecap="round" fill="none" />
+            </svg>
+            <div className="relative grid gap-10 lg:grid-cols-12 lg:items-end">
+              <div className="lg:col-span-7">
+                <h2 className="font-display text-3xl font-bold leading-tight text-sandstone sm:text-5xl">
+                  Book a free demo class this week.
+                </h2>
+                <p className="mt-4 max-w-md font-body text-base text-sandstone/60 sm:text-lg">
+                  Tell us the class and subject. We’ll call you back and set up a demo at your home.
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    to="/browse-teachers"
+                    className="rounded-full bg-marigold px-7 py-3.5 text-center font-body text-sm font-semibold text-ink transition-colors hover:bg-marigold/90"
+                  >
+                    Find a tutor
+                  </Link>
+                  <a
+                    href={WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-sandstone/25 px-7 py-3.5 text-center font-body text-sm font-semibold text-sandstone transition-colors hover:border-sandstone/60"
+                  >
+                    Message us on WhatsApp
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-3 lg:col-span-5">
+                {CONTACTS.map((c) => (
+                  <a
+                    key={c.tel}
+                    href={`tel:${c.tel}`}
+                    className="flex items-center justify-between rounded-2xl border border-sandstone/10 bg-sandstone/5 px-5 py-4 transition-colors hover:border-marigold/50"
+                  >
+                    <span>
+                      <span className="block font-body text-xs uppercase tracking-[0.15em] text-sandstone/45">Call</span>
+                      <span className="mt-0.5 block font-display text-lg font-semibold text-sandstone">{c.name}</span>
+                    </span>
+                    <span className="font-body text-sm font-medium text-marigold">{c.display}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="bg-ink px-4 sm:px-6 md:px-8 lg:px-24 py-12">
-        <div className="mx-auto max-w-5xl">
-          <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-between">
-            {/* Left — Brand */}
-            <div className="text-center sm:text-left">
-              <p className="font-display text-xl font-bold text-sandstone">
-                Kota Tuition Hub
-              </p>
-              <p className="font-body mt-1 text-sm text-sandstone/50">
-                Founded by Ankur Yadav &amp; Sanskar Thakur
+      <footer className="border-t border-ink/10 px-4 pb-24 pt-16 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <Logo />
+              <p className="mt-4 max-w-xs font-body text-sm leading-relaxed text-ink/55">
+                Interviewed home tutors for every class, across Kota, Rajasthan.
               </p>
             </div>
-
-            {/* Right — Contact */}
-            <div className="text-center sm:text-right">
-              <p className="font-body text-xs font-medium uppercase tracking-wider text-sandstone/40">
-                For any queries
-              </p>
-              <div className="mt-4 sm:mt-2 flex flex-col gap-3 sm:gap-1.5">
-                <div className="flex items-center justify-center gap-2 sm:justify-end">
-                  <span className="font-body text-sm text-sandstone/70">Ankur Yadav</span>
-                  <a href="tel:+919536783342" aria-label="Call Ankur" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 9536783342</a>
-                </div>
-                <div className="flex items-center justify-center gap-2 sm:justify-end">
-                  <span className="font-body text-sm text-sandstone/70">Sanskar Thakur</span>
-                  <a href="tel:+916206105858" aria-label="Call Sanskar" className="font-mono text-sm text-marigold hover:text-marigold/80 transition-colors">+91 6206105858</a>
-                </div>
-              </div>
+            <div className="lg:col-span-3">
+              <p className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-ink/40">Explore</p>
+              <ul className="mt-4 space-y-2.5 font-body text-sm">
+                <li><Link to="/browse-teachers" className="text-ink/70 hover:text-ink">Find a tutor</Link></li>
+                <li><Link to="/fee-structure" className="text-ink/70 hover:text-ink">Fee structure</Link></li>
+                <li><Link to="/login" className="text-ink/70 hover:text-ink">Join as a tutor</Link></li>
+                <li><Link to="/login" className="text-ink/70 hover:text-ink">Log in</Link></li>
+              </ul>
+            </div>
+            <div className="lg:col-span-4">
+              <p className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-ink/40">Contact</p>
+              <ul className="mt-4 space-y-2.5 font-body text-sm">
+                {CONTACTS.map((c) => (
+                  <li key={c.tel} className="flex justify-between gap-4 sm:block">
+                    <span className="text-ink/70">{c.name}</span>{' '}
+                    <a href={`tel:${c.tel}`} className="font-medium text-ink hover:text-marigold">{c.display}</a>
+                  </li>
+                ))}
+                <li className="pt-1 text-ink/55">Kota, Rajasthan</li>
+              </ul>
             </div>
           </div>
-
-          {/* Bottom line */}
-          <div className="mt-8 border-t border-sandstone/10 pt-6 text-center">
-            <p className="font-body text-xs text-sandstone/30">
-              &copy; {new Date().getFullYear()} Kota Tuition Hub. Made with ❤️ in Kota, Rajasthan.
-            </p>
+          <div className="mt-14 flex flex-col gap-2 border-t border-ink/10 pt-6 font-body text-xs text-ink/45 sm:flex-row sm:justify-between">
+            <p>© {new Date().getFullYear()} Nexve · Kota Tuition Hub</p>
+            <p>Founded by Ankur Yadav &amp; Sanskar Thakur</p>
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp */}
+      <a
+        href={WHATSAPP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat with us on WhatsApp"
+        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_30px_-8px_rgba(0,0,0,0.4)] transition-transform hover:scale-105"
+      >
+        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
+          <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.47-1.76-1.64-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.45 9.45 0 01-4.82-1.32l-.35-.2-3.58.94.96-3.49-.23-.36a9.44 9.44 0 01-1.45-5.03c0-5.22 4.25-9.47 9.48-9.47 2.53 0 4.91.99 6.7 2.78a9.41 9.41 0 012.77 6.7c0 5.22-4.25 9.46-9.47 9.46zm8.06-17.53A11.33 11.33 0 0012.04.62C5.76.62.65 5.73.65 12.01c0 2.01.52 3.97 1.52 5.69L.55 23.6l6.04-1.58a11.36 11.36 0 005.44 1.39h.01c6.28 0 11.39-5.11 11.39-11.39 0-3.04-1.19-5.9-3.33-8.05z" />
+        </svg>
+      </a>
     </div>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M5 8l5 5 5-5" />
+    </svg>
   );
 }
 

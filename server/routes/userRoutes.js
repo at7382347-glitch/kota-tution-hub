@@ -110,6 +110,8 @@ router.get('/teachers', async (req, res) => {
         'teacherProfile.mode': 1,
         'teacherProfile.bio': 1,
         'teacherProfile.profilePhoto': 1,
+        'teacherProfile.averageRating': 1,
+        'teacherProfile.totalRatings': 1,
       }
     ).lean();
 

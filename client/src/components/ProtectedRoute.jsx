@@ -31,7 +31,7 @@ function ProtectedRoute({ children }) {
 
   if (!user) {
     // Save where the user was trying to go so Login can redirect back
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   }
 
   return children;
