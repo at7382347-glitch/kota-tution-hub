@@ -6,6 +6,7 @@ const cloudinary = require('cloudinary').v2;
 const User = require('../models/User');
 const TuitionRequest = require('../models/TuitionRequest');
 const { requireUser, requireAdmin, requireUserOrAdmin, requireSelf } = require('../middleware/auth');
+const { perStudentFeeFor } = require('../config/fees');
 
 // Cloudinary config - reads CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET
 cloudinary.config({
@@ -235,13 +236,12 @@ router.put('/:firebaseUid/student-requirement', requireUser, requireSelf, async 
       return res.status(403).json({ error: 'Only student accounts can post a tuition requirement.' });
     }
 
-    const { name, contactNumber, subjects, classLevel, budgetPackages, area, additionalNotes, isGroupTuition, groupSize, perStudentFee } = req.body;
+    const { name, contactNumber, subjects, classLevel, budgetPackages, area, additionalNotes, isGroupTuition, groupSize } = req.body;
 
     const groupFlag = !!isGroupTuition;
     const parsedGroupSize = groupFlag ? (Number(groupSize) === 3 ? 3 : 2) : 1;
-    const parsedPerStudentFee = perStudentFee !== undefined && perStudentFee !== null && perStudentFee !== ''
-      ? Number(perStudentFee) || null
-      : null;
+    // Fee is computed here from the chosen package (group = 40% off per student), never trusted from the client
+    const parsedPerStudentFee = perStudentFeeFor(Array.isArray(budgetPackages) ? budgetPackages[0] : null, groupFlag);
 
     const requirementData = {
       contactNumber: contactNumber || '',

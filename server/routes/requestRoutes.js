@@ -4,6 +4,7 @@ const router = express.Router();
 const TuitionRequest = require('../models/TuitionRequest');
 const User = require('../models/User');
 const { requireUser, requireAdmin, requireUserOrAdmin } = require('../middleware/auth');
+const { perStudentFeeFor } = require('../config/fees');
 
 const COMMISSION_RATE = 0.1; // Platform keeps 10%, teacher gets 90%
 
@@ -27,7 +28,7 @@ router.param('requestId', (req, res, next, id) => {
 // POST /api/requests - Student creates a tuition request for a teacher
 router.post('/', requireUser, async (req, res) => {
   try {
-    const { teacherFirebaseUid, subject, isGroupTuition, groupSize, perStudentFee } = req.body;
+    const { teacherFirebaseUid, subject, isGroupTuition, groupSize } = req.body;
     const studentFirebaseUid = req.firebaseUid;
 
     if (!teacherFirebaseUid || !subject) {
@@ -56,9 +57,11 @@ router.post('/', requireUser, async (req, res) => {
       ? ([2, 3].includes(Number(groupSize)) ? Number(groupSize)
         : ([2, 3].includes(student.studentRequirement?.groupSize) ? student.studentRequirement.groupSize : 2))
       : 1;
-    const parsedPerStudentFee = (perStudentFee !== undefined && perStudentFee !== null && perStudentFee !== '')
-      ? (Number(perStudentFee) || null)
-      : (student.studentRequirement?.perStudentFee ?? null);
+    // Fee comes from the student's chosen package (group = 40% off per student), never from the client
+    const parsedPerStudentFee =
+      perStudentFeeFor(student.studentRequirement?.budgetPackages?.[0], groupFlag) ??
+      student.studentRequirement?.perStudentFee ??
+      null;
 
     // Build the request document
     const tuitionRequest = await TuitionRequest.create({

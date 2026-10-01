@@ -8,12 +8,6 @@ import { resolveTeacherPhotoUrl } from '../utils/teacherPhoto';
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 
-const FEE_PACKAGES = {
-  '1hr-10000': '1 hr — ₹10k/mo',
-  '1.5hr-15000': '1.5 hr — ₹15k/mo',
-  '2hr-20000': '2 hr — ₹20k/mo',
-};
-
 function BrowseTeachers() {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -283,20 +277,6 @@ function TeacherCard({ teacher }) {
             {(p.classLevels || []).join(', ') || '—'}
           </p>
         </div>
-
-        {/* Fee Packages */}
-        {p.feePackages && p.feePackages.length > 0 && (
-          <div>
-            <p className="font-display text-[10px] text-ink/30 uppercase tracking-wide mb-1">Fee Packages</p>
-            <div className="flex flex-wrap gap-1">
-              {p.feePackages.map((pkg) => (
-                <span key={pkg} className="inline-block bg-sage/10 text-sage text-[11px] px-2 py-0.5 rounded-full font-medium font-mono">
-                  {FEE_PACKAGES[pkg] || pkg}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Bio preview */}
         {bioPreview && (

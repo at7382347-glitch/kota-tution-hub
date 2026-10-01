@@ -4,38 +4,10 @@ import { auth } from '../firebase';
 import { Helmet } from 'react-helmet-async';
 
 import { apiFetch } from '../api';
+import { FEE_PACKAGES, GROUP_DISCOUNT, formatINR, getPackage, groupFee, packageFullLabel, packageLabel } from '../fees';
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
-const BUDGET_PACKAGES = [
-  { value: 'class-6', label: 'Class 6 - ₹7,500/month (1 hour/day)' },
-  { value: 'class-7', label: 'Class 7 - ₹7,500/month (1 hour/day)' },
-  { value: 'class-8', label: 'Class 8 - ₹8,500/month (1 hour/day)' },
-  { value: 'class-9-board', label: 'Class 9 (School/Board) - ₹8,500/month (1 hour/day)' },
-  { value: 'class-10-board', label: 'Class 10 (School/Board) - ₹10,000/month (1 hour/day)' },
-  { value: 'class-9-10-jee-neet', label: 'Class 9 & 10 (JEE/NEET Foundation) - ₹10,000/month (1 hour/day)' },
-  { value: 'class-11-board', label: 'Class 11 (School/Board) - ₹10,000/month (1 hour/day)' },
-  { value: 'class-11-jee-neet', label: 'Class 11 (JEE/NEET) - ₹12,000/month (1 hour/day)' },
-  { value: 'class-12-board', label: 'Class 12 (School/Board) - ₹10,000/month (1 hour/day)' },
-  { value: 'class-12-jee-neet', label: 'Class 12 (JEE/NEET) - ₹12,000/month (1 hour/day)' },
-  { value: 'dropper-jee-neet', label: 'Dropper (JEE/NEET) - ₹12,000/month (1 hour/day)' },
-];
-
-// Numeric monthly fee per package value — used for group split calculator
-const PACKAGE_FEE_MAP = {
-  'class-6': 7500,
-  'class-7': 7500,
-  'class-8': 8500,
-  'class-9-board': 8500,
-  'class-10-board': 10000,
-  'class-9-10-jee-neet': 10000,
-  'class-11-board': 10000,
-  'class-11-jee-neet': 12000,
-  'class-12-board': 10000,
-  'class-12-jee-neet': 12000,
-  'dropper-jee-neet': 12000,
-};
-
 const initialForm = {
   name: '',
   contactNumber: '',
@@ -126,9 +98,8 @@ function StudentDashboard() {
 
   // Group tuition calculator (derived, not stored)
   const selectedPackageValue = form.budgetPackages[0] || '';
-  const baseFee = PACKAGE_FEE_MAP[selectedPackageValue] || 0;
-  const activeGroupSize = form.isGroupTuition ? Number(form.groupSize) || 2 : 1;
-  const perStudentFee = baseFee ? Math.round(baseFee / activeGroupSize) : 0;
+  const baseFee = getPackage(selectedPackageValue)?.fee || 0;
+  const perStudentFee = form.isGroupTuition ? groupFee(baseFee) : baseFee;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,7 +156,6 @@ function StudentDashboard() {
           additionalNotes: form.additionalNotes,
           isGroupTuition: !!form.isGroupTuition,
           groupSize: form.isGroupTuition ? (Number(form.groupSize) === 3 ? 3 : 2) : 1,
-          perStudentFee: baseFee ? Math.round(baseFee / (form.isGroupTuition ? (Number(form.groupSize) === 3 ? 3 : 2) : 1)) : 0,
         }),
       });
 
@@ -325,10 +295,10 @@ function StudentDashboard() {
                 <p className="font-display text-ink/40 text-xs uppercase tracking-wide mb-1">Fee Packages</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(req.budgetPackages || []).map((pkg) => {
-                    const match = BUDGET_PACKAGES.find((bp) => bp.value === pkg);
+                    const label = packageLabel(pkg);
                     return (
                       <span key={pkg} className="inline-block bg-marigold/10 text-marigold text-xs px-2 py-1 rounded-full font-mono font-medium">
-                        {match ? match.label : pkg}
+                        {label}
                       </span>
                     );
                   })}
@@ -589,9 +559,9 @@ function StudentDashboard() {
                   className="w-full appearance-none rounded-lg border border-ink/15 bg-white px-3 py-3 sm:py-2 pr-10 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent"
                 >
                   <option value="">Select Fee Package</option>
-                  {BUDGET_PACKAGES.map((pkg) => (
+                  {FEE_PACKAGES.map((pkg) => (
                     <option key={pkg.value} value={pkg.value}>
-                      {pkg.label}
+                      {packageFullLabel(pkg)}
                     </option>
                   ))}
                 </select>
@@ -622,10 +592,10 @@ function StudentDashboard() {
                 />
                 <span>
                   <span className="block text-sm font-semibold text-ink font-body">
-                    Study with Friends &amp; Split Fee (Up to 3 Students)
+                    Group Tuition — {Math.round(GROUP_DISCOUNT * 100)}% off for each student
                   </span>
                   <span className="mt-0.5 block text-xs text-ink/50 font-body">
-                    Share one tutor with friends and split the package fee equally.
+                    Study with 1 or 2 friends or siblings (maximum 3 students) with one tutor. Each student pays {Math.round(GROUP_DISCOUNT * 100)}% less.
                   </span>
                 </span>
               </label>
@@ -665,13 +635,13 @@ function StudentDashboard() {
                   <div className="flex items-center rounded-lg border border-marigold/30 bg-marigold/10 px-3 py-3 sm:py-2">
                     {baseFee ? (
                       <p className="text-xs sm:text-sm font-body text-ink">
-                        <span className="font-mono font-semibold">₹{baseFee.toLocaleString('en-IN')}</span>
-                        <span className="text-ink/50"> / {activeGroupSize} = </span>
-                        <span className="font-mono font-bold text-marigold">₹{perStudentFee.toLocaleString('en-IN')}/month per student</span>
+                        <span className="font-mono text-ink/50 line-through">{formatINR(baseFee)}</span>
+                        <span className="text-ink/50"> → </span>
+                        <span className="font-mono font-bold text-marigold">{formatINR(perStudentFee)}/month per student</span>
                       </p>
                     ) : (
                       <p className="text-xs font-body text-ink/50">
-                        Select a fee package above to see per-student split.
+                        Select a fee package above to see the group fee.
                       </p>
                     )}
                   </div>

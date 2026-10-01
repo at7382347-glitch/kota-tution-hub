@@ -5,6 +5,9 @@ import { apiFetch } from '../api';
 import { resolveTeacherPhotoUrl } from '../utils/teacherPhoto';
 import useReveal from '../hooks/useReveal';
 import Logo from '../components/Logo';
+import { FEE_GROUPS, FEE_PACKAGES, GROUP_DISCOUNT, formatINR, groupFee } from '../fees';
+
+const GROUP_DISCOUNT_PCT = Math.round(GROUP_DISCOUNT * 100);
 
 /* ─── Content ─────────────────────────────────────────────────────── */
 
@@ -57,15 +60,9 @@ const PROMISES = [
     text: 'Tutors must give 15 days’ notice before leaving, so we always have time to arrange a replacement.',
   },
   {
-    title: 'Study together, pay less',
-    text: 'Up to three students can share one tutor and split the monthly fee — ideal for siblings or friends.',
+    title: 'Study together, pay 40% less',
+    text: 'When 2 or 3 students share one tutor, each student pays 40% less than the solo fee — ideal for siblings or friends.',
   },
-];
-
-const PLANS = [
-  { name: 'Foundation', classes: 'Class 6 – 8', price: '7,500', note: 'Strong basics in every subject.' },
-  { name: 'Boards', classes: 'Class 9 – 12', price: '8,500', note: 'School and board exam preparation.' },
-  { name: 'JEE / NEET', classes: 'Class 9 – 12 & Droppers', price: '10,000', note: 'Competitive exam coaching at home.' },
 ];
 
 const AREAS = [
@@ -96,7 +93,7 @@ const FAQS = [
   },
   {
     q: 'Do you offer group tuition?',
-    a: 'Yes. Up to three students can study together with one tutor and split the monthly fee.',
+    a: 'Yes. 2 or 3 students (maximum 3) can study together with one tutor, and each student pays 40% less than the solo fee.',
   },
 ];
 
@@ -539,31 +536,41 @@ function Home() {
             </div>
 
             <div className="mt-12 grid gap-4 md:grid-cols-3">
-              {PLANS.map((plan, i) => (
+              {FEE_GROUPS.map((group, i) => (
                 <div
-                  key={plan.name}
+                  key={group.id}
                   className="reveal flex flex-col rounded-2xl border border-ink/10 bg-white p-7 transition-shadow duration-300 hover:shadow-[0_16px_40px_-20px_rgba(31,42,68,0.3)]"
                   style={{ transitionDelay: `${i * 70}ms` }}
                 >
-                  <p className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-ink/45">{plan.classes}</p>
-                  <h3 className="mt-2 font-display text-2xl font-bold text-ink">{plan.name}</h3>
-                  <p className="mt-6 font-body text-sm text-ink/50">from</p>
-                  <p className="font-display text-4xl font-bold tracking-tight text-ink">
-                    ₹{plan.price}
-                    <span className="ml-1 font-body text-base font-normal text-ink/45">/month</span>
-                  </p>
-                  <p className="mt-4 border-t border-ink/5 pt-4 font-body text-sm text-ink/60">{plan.note}</p>
-                  <p className="mt-1 font-body text-sm text-ink/60">1 hour a day · at your home</p>
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-ink/45">{group.classes}</p>
+                  <h3 className="mt-2 font-display text-2xl font-bold text-ink">{group.name}</h3>
+                  <p className="mt-1 font-body text-sm text-ink/55">{group.note}</p>
+                  <ul className="mt-5 flex-1 divide-y divide-ink/5 border-y border-ink/5">
+                    {FEE_PACKAGES.filter((p) => p.group === group.id).map((p) => (
+                      <li key={p.value} className="flex items-baseline justify-between gap-3 py-2.5">
+                        <span className="font-body text-sm text-ink/70">{p.label}</span>
+                        <span className="whitespace-nowrap font-display text-lg font-bold text-ink">
+                          {formatINR(p.fee)}
+                          <span className="font-body text-xs font-normal text-ink/40">/mo</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 font-body text-xs text-ink/50">1 hour a day · at your home</p>
                 </div>
               ))}
             </div>
 
             <div className="reveal mt-4 flex flex-col gap-4 rounded-2xl bg-marigold/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
-              <div>
-                <p className="font-display text-lg font-semibold text-ink">Group tuition for 2–3 students</p>
-                <p className="mt-1 font-body text-sm text-ink/65">
-                  Siblings or friends can share one tutor and split the monthly fee between them.
-                </p>
+              <div className="flex items-center gap-5">
+                <p className="flex-shrink-0 font-display text-3xl font-bold text-ink sm:text-4xl">{GROUP_DISCOUNT_PCT}% off</p>
+                <div>
+                  <p className="font-display text-lg font-semibold text-ink">Group tuition for 2–3 students</p>
+                  <p className="mt-1 font-body text-sm text-ink/65">
+                    Study with a sibling or friend and each student pays {GROUP_DISCOUNT_PCT}% less — e.g.{' '}
+                    {formatINR(12000)} becomes {formatINR(groupFee(12000))} per student.
+                  </p>
+                </div>
               </div>
               <a
                 href={WHATSAPP_URL}

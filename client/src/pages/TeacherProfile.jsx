@@ -5,12 +5,6 @@ import { Helmet } from 'react-helmet-async';
 
 import { API_BASE, apiFetch } from '../api';
 
-const FEE_PACKAGES = {
-  '1hr-10000': '1 hr — ₹10,000/mo',
-  '1.5hr-15000': '1.5 hr — ₹15,000/mo',
-  '2hr-20000': '2 hr — ₹20,000/mo',
-};
-
 function TeacherProfile() {
   const { id } = useParams(); // firebaseUid from URL
   const [teacher, setTeacher] = useState(null);
@@ -313,19 +307,6 @@ function TeacherProfile() {
                 {(!p.classLevels || p.classLevels.length === 0) && <span className="text-gray-400 text-sm">—</span>}
               </div>
             </DetailRow>
-
-            {/* Fee Packages */}
-            {p.feePackages && p.feePackages.length > 0 && (
-              <DetailRow label="Fee Packages">
-                <div className="flex flex-wrap gap-1.5">
-                  {p.feePackages.map((pkg) => (
-                    <span key={pkg} className="inline-block bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                      {FEE_PACKAGES[pkg] || pkg}
-                    </span>
-                  ))}
-                </div>
-              </DetailRow>
-            )}
 
             {/* Bio */}
             {p.bio && (

@@ -3,26 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { API_BASE, adminFetch, getAdminToken, setAdminToken } from '../api';
+import { packageLabel } from '../fees';
 
-const FEE_PACKAGES = {
-  '1hr-10000': '1 hr — ₹10,000/mo',
-  '1.5hr-15000': '1.5 hr — ₹15,000/mo',
-  '2hr-20000': '2 hr — ₹20,000/mo',
-  // legacy IDs
-  '1hr-5000': '1 hr — ₹5,000/mo',
-  '1.5hr-8000': '1.5 hr — ₹8,000/mo',
-  '2hr-10000': '2 hr — ₹10,000/mo',
-};
-
-const BUDGET_PACKAGES = {
-  '1hr-10000': '1 hr — ₹10,000/mo',
-  '1.5hr-15000': '1.5 hr — ₹15,000/mo',
-  '2hr-20000': '2 hr — ₹20,000/mo',
-  // legacy IDs
-  '1hr-5000': '1 hr — ₹5,000/mo',
-  '1.5hr-8000': '1.5 hr — ₹8,000/mo',
-  '2hr-10000': '2 hr — ₹10,000/mo',
-};
 
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -574,7 +556,7 @@ function AdminDashboard() {
                           <p className="font-display text-ink/40 text-[10px] uppercase tracking-wide">Fee Packages</p>
                           <div className="flex flex-wrap gap-1 mt-0.5">
                             {(p.feePackages || []).map((pkg) => (
-                              <span key={pkg} className="bg-marigold/10 text-marigold text-[10px] px-1.5 py-0.5 rounded-full font-mono">{FEE_PACKAGES[pkg] || pkg}</span>
+                              <span key={pkg} className="bg-marigold/10 text-marigold text-[10px] px-1.5 py-0.5 rounded-full font-mono">{packageLabel(pkg)}</span>
                             ))}
                             {(!p.feePackages || p.feePackages.length === 0) && <span className="text-ink/30 text-xs">—</span>}
                           </div>
@@ -678,7 +660,7 @@ function AdminDashboard() {
                           <p className="font-display text-ink/40 text-[10px] uppercase tracking-wide">Budget Packages</p>
                           <div className="flex flex-wrap gap-1 mt-0.5">
                             {(r.budgetPackages || []).map((pkg) => (
-                              <span key={pkg} className="bg-marigold/10 text-marigold text-[10px] px-1.5 py-0.5 rounded-full font-mono">{BUDGET_PACKAGES[pkg] || pkg}</span>
+                              <span key={pkg} className="bg-marigold/10 text-marigold text-[10px] px-1.5 py-0.5 rounded-full font-mono">{packageLabel(pkg)}</span>
                             ))}
                             {(!r.budgetPackages || r.budgetPackages.length === 0) && <span className="text-ink/30 text-xs">—</span>}
                           </div>
