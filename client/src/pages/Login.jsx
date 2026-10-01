@@ -297,9 +297,20 @@ function Login() {
               
               {/* Teacher Consent Box */}
               <div className="bg-sandstone border border-ink/10 rounded-xl p-3.5 sm:p-4 mb-4">
-                <p className="text-xs text-ink/70 leading-relaxed mb-4 font-body">
-                  By registering as a teacher on Kota Tuition Hub, you agree that the platform charges a <strong className="text-ink">20% commission</strong> on the tuition fee for every student successfully converted through this platform. This commission is payable to Kota Tuition Hub as per the terms of use.
+                <p className="text-xs text-ink/70 leading-relaxed mb-2 font-body">
+                  By registering as a teacher on Kota Tuition Hub, you agree to the following terms:
                 </p>
+                <ul className="list-disc pl-4 space-y-1.5 text-xs text-ink/70 leading-relaxed mb-4 font-body marker:text-marigold">
+                  <li>
+                    <strong className="text-ink">10% Platform Fee:</strong> The platform charges a 10% commission on the tuition fee for every student converted through Kota Tuition Hub.
+                  </li>
+                  <li>
+                    <strong className="text-ink">Fee Payment via Platform:</strong> Student tuition fees must be paid directly through Kota Tuition Hub. The platform deducts its 10% fee and transfers the remaining 90% to the teacher.
+                  </li>
+                  <li>
+                    <strong className="text-ink">15-Day Notice Period:</strong> Teachers cannot discontinue or leave a tuition abruptly. A mandatory 15-day advance notice is required.
+                  </li>
+                </ul>
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <input 
                     type="checkbox" 
@@ -308,7 +319,7 @@ function Login() {
                     className="mt-0.5 w-4 h-4 text-marigold rounded border-ink/20 focus:ring-marigold transition-colors cursor-pointer"
                   />
                   <span className="text-xs font-medium text-ink/80 group-hover:text-ink transition-colors select-none leading-tight">
-                    I have read and agree to the above commission terms
+                    I have read and agree to the above terms
                   </span>
                 </label>
               </div>
