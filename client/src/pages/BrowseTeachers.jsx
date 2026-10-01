@@ -5,33 +5,20 @@ import { Helmet } from 'react-helmet-async';
 const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 
 // Build a loadable image URL from the teacher object.
-// - http(s) URLs are returned as-is.
-// - /uploads/... or uploads/... paths are resolved against VITE_API_URL,
-//   falling back to a relative same-host URL when VITE_API_URL is undefined.
+// - Full http(s) URLs (Cloudinary) are returned as-is.
+// - Legacy relative paths (/uploads/...) are resolved against VITE_API_URL.
+// - Returns null when there is no photo, so the card shows the initial instead.
 function resolveTeacherPhotoUrl(teacher) {
-  const raw =
-    teacher?.teacherProfile?.profilePhoto ||
-    teacher?.profilePicture ||
-    teacher?.photo ||
-    teacher?.avatar ||
-    teacher?.photoURL ||
-    teacher?.user?.profilePicture ||
-    '';
+  const raw = teacher?.teacherProfile?.profilePhoto || teacher?.photoURL || '';
 
   if (typeof raw !== 'string') return null;
   const url = raw.trim();
   if (!url) return null;
 
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (!API_BASE) return null;
 
-  const normalized = url.startsWith('/') ? url : `/${url}`;
-  if (normalized.startsWith('/uploads/')) {
-    if (API_BASE) return `${API_BASE}${normalized}`;
-    return normalized;
-  }
-
-  if (API_BASE) return `${API_BASE}${normalized}`;
-  return normalized;
+  return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`;
 }
 
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
@@ -240,6 +227,7 @@ function BrowseTeachers() {
 function TeacherCard({ teacher }) {
   const p = teacher?.teacherProfile || {};
   const photoUrl = resolveTeacherPhotoUrl(teacher);
+  const [imageError, setImageError] = useState(false);
 
   const bioPreview =
     p.bio && p.bio.length > 80 ? p.bio.slice(0, 80) + '…' : p.bio;
@@ -249,17 +237,18 @@ function TeacherCard({ teacher }) {
       {/* Top section: photo + basic info */}
       <div className="p-4 sm:p-5 flex gap-4">
         {/* Photo */}
-        <div className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl bg-marigold/15 flex items-center justify-center text-marigold text-xl sm:text-2xl font-bold flex-shrink-0 font-display overflow-hidden relative">
-          <span>{(teacher.name || 'T').charAt(0).toUpperCase()}</span>
-          {photoUrl ? (
+        <div className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl bg-marigold/15 flex items-center justify-center text-marigold text-xl sm:text-2xl font-bold flex-shrink-0 font-display overflow-hidden">
+          {photoUrl && !imageError ? (
             <img
               src={photoUrl}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              onError={() => setImageError(true)}
               alt={`${teacher.name || 'Verified teacher'}, ${p?.subjects?.[0] || 'expert'} tutor in Kota`}
               loading="lazy"
-              className="absolute inset-0 h-full w-full rounded-xl object-cover border border-ink/10 bg-sandstone"
+              className="h-full w-full rounded-xl object-cover border border-ink/10 bg-sandstone"
             />
-          ) : null}
+          ) : (
+            <span>{(teacher.name || 'T').charAt(0).toUpperCase()}</span>
+          )}
         </div>
 
         <div className="min-w-0">

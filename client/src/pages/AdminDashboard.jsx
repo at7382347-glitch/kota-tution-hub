@@ -510,7 +510,7 @@ function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {teachers.map((t) => {
                   const p = t.teacherProfile || {};
-                  const photoUrl = p.profilePhoto ? `${API_BASE}${p.profilePhoto}` : null;
+                  const photoUrl = p.profilePhoto ? (p.profilePhoto.startsWith('http') ? p.profilePhoto : `${API_BASE}${p.profilePhoto}`) : null;
                   return (
                       <div key={t.firebaseUid || t._id} className="relative bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-ink/8 p-5 group">
                         {/* Delete Button */}

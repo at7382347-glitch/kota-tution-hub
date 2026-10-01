@@ -2,22 +2,40 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
 const User = require('../models/User');
 const TuitionRequest = require('../models/TuitionRequest');
 
-// Multer config - save uploaded images to /server/uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', 'uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
+// Cloudinary config - reads CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 });
 
+const isCloudinaryConfigured = () =>
+  !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+
+// Stream an in-memory image buffer to Cloudinary and resolve with its HTTPS URL
+function uploadToCloudinary(buffer, firebaseUid) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'kota-tuition-hub/teachers',
+        public_id: `${firebaseUid}-${Date.now()}`,
+        resource_type: 'image',
+        transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face', quality: 'auto', fetch_format: 'auto' }],
+      },
+      (err, result) => (err ? reject(err) : resolve(result.secure_url))
+    );
+    stream.end(buffer);
+  });
+}
+
+// Multer config - keep uploaded images in memory; they are streamed to Cloudinary
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|gif/;
@@ -113,7 +131,7 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
   try {
     console.log('[PUT teacher-profile] Params:', req.params);
     console.log('[PUT teacher-profile] Body keys:', Object.keys(req.body));
-    console.log('[PUT teacher-profile] File:', req.file ? req.file.filename : 'none');
+    console.log('[PUT teacher-profile] File:', req.file ? req.file.originalname : 'none');
 
     const { name, contactNumber, subjects, classLevels, qualification, experience, feePackages, area, mode, bio } = req.body;
 
@@ -131,9 +149,13 @@ router.put('/:firebaseUid/teacher-profile', upload.single('profilePhoto'), async
       isProfileComplete: true,
     };
 
-    // If a new photo was uploaded, add its URL
+    // If a new photo was uploaded, push it to Cloudinary and store the full HTTPS URL
     if (req.file) {
-      profileData.profilePhoto = `/uploads/${req.file.filename}`;
+      if (!isCloudinaryConfigured()) {
+        console.error('[PUT teacher-profile] Cloudinary env vars are missing; cannot store photo.');
+        return res.status(500).json({ error: 'Photo storage is not configured. Please contact support.' });
+      }
+      profileData.profilePhoto = await uploadToCloudinary(req.file.buffer, req.params.firebaseUid);
     } else {
       // Keep existing photo if editing without re-uploading
       const existingUser = await User.findOne({ firebaseUid: req.params.firebaseUid });

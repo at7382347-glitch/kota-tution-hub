@@ -86,7 +86,7 @@ function TeacherDashboard() {
               bio: data.teacherProfile.bio || '',
             });
             if (data.teacherProfile.profilePhoto) {
-              setPhotoPreview(`${API_BASE}${data.teacherProfile.profilePhoto}`);
+              setPhotoPreview(data.teacherProfile.profilePhoto.startsWith('http') ? data.teacherProfile.profilePhoto : `${API_BASE}${data.teacherProfile.profilePhoto}`);
             }
             setShowForm(false);
           } else {
@@ -219,7 +219,7 @@ function TeacherDashboard() {
         setShowForm(false);
         setPhotoFile(null);
         if (data.teacherProfile?.profilePhoto) {
-          setPhotoPreview(`${API_BASE}${data.teacherProfile.profilePhoto}`);
+          setPhotoPreview(data.teacherProfile.profilePhoto.startsWith('http') ? data.teacherProfile.profilePhoto : `${API_BASE}${data.teacherProfile.profilePhoto}`);
         }
         setMessage({ text: 'Profile saved successfully!', type: 'success' });
         setTimeout(() => setMessage({ text: '', type: '' }), 4000);
