@@ -7,6 +7,15 @@ const { requireUser, requireAdmin, requireUserOrAdmin } = require('../middleware
 
 const COMMISSION_RATE = 0.1; // Platform keeps 10%, teacher gets 90%
 
+// Phone numbers are admin-only: students and teachers must never receive each other's
+// (or any) contact number through a request, so strip them for non-admin callers.
+function forViewer(req, requestDoc) {
+  if (req.isAdmin) return requestDoc;
+  const { studentContactNumber, teacherContactNumber, ...rest } =
+    typeof requestDoc.toObject === 'function' ? requestDoc.toObject() : requestDoc;
+  return rest;
+}
+
 // Rejects malformed :requestId values with 400 instead of a CastError 500
 router.param('requestId', (req, res, next, id) => {
   if (!mongoose.isValidObjectId(id)) {
@@ -70,7 +79,7 @@ router.post('/', requireUser, async (req, res) => {
 
     console.log(`[POST /requests] Request created: ${tuitionRequest._id} (${subject})`);
 
-    res.status(201).json(tuitionRequest);
+    res.status(201).json(forViewer(req, tuitionRequest));
   } catch (err) {
     console.error('Create request error:', err);
     res.status(500).json({ error: err.message });
@@ -83,8 +92,8 @@ router.get('/', requireUserOrAdmin, async (req, res) => {
     const filter = req.isAdmin
       ? {}
       : { $or: [{ studentFirebaseUid: req.firebaseUid }, { teacherFirebaseUid: req.firebaseUid }] };
-    const requests = await TuitionRequest.find(filter).sort({ createdAt: -1 });
-    res.json(requests);
+    const requests = await TuitionRequest.find(filter).sort({ createdAt: -1 }).lean();
+    res.json(requests.map((r) => forViewer(req, r)));
   } catch (err) {
     console.error('Fetch requests error:', err);
     res.status(500).json({ error: err.message });
@@ -136,7 +145,7 @@ router.get('/:requestId', requireUserOrAdmin, async (req, res) => {
     if (!req.isAdmin && !isParty) {
       return res.status(403).json({ error: 'You do not have access to this request.' });
     }
-    res.json(request);
+    res.json(forViewer(req, request));
   } catch (err) {
     console.error('Fetch request error:', err);
     res.status(500).json({ error: err.message });
@@ -176,7 +185,7 @@ router.put('/:requestId/confirm', requireUser, async (req, res) => {
     // If one is yes and one is no, or if any is pending, leave demoStatus as is.
 
     const updatedRequest = await request.save();
-    res.json(updatedRequest);
+    res.json(forViewer(req, updatedRequest));
   } catch (err) {
     console.error('Confirm request error:', err);
     res.status(500).json({ error: err.message });

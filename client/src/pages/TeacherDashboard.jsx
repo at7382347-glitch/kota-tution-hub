@@ -624,6 +624,9 @@ function TeacherDashboard() {
                 Short Bio <span className="text-maroon">*</span> <span className="text-ink/30">{form.bio.length}/200)</span>
               </label>
               <textarea id="bio" name="bio" maxLength={200} rows={3} value={form.bio} onChange={handleChange} placeholder="Tell students about yourself..." className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold focus:border-transparent resize-none" />
+              <p className="text-xs text-ink/40 mt-1 font-body">
+                Do not include your phone number, WhatsApp, or email — students connect with you through Kota Tuition Hub.
+              </p>
             </div>
 
             {/* Buttons */}

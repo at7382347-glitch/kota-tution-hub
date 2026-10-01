@@ -34,6 +34,20 @@ function uploadToCloudinary(buffer, firebaseUid) {
   });
 }
 
+// Public profile text must not carry contact details (phone numbers are admin-only).
+// Matches Indian mobile numbers (optionally +91/0 prefixed, with spaces/dashes) and
+// common "contact me" phrases; years like "2015 2019" don't match since mobiles start with 6-9.
+const PHONE_PATTERN = /(?<!\d)(?:\+?91[\s-]?|0)?[6-9](?:[\s.-]?\d){9}(?!\d)/;
+const CONTACT_PHRASE_PATTERN = /whats\s*app|watsapp|wa\.me|call\s+me|contact\s+me|ph(?:one)?\s*(?:no|number)|mob(?:ile)?\s*(?:no|number)|@gmail|@yahoo|instagram|telegram/i;
+
+function findContactInfo(fields) {
+  for (const [label, value] of Object.entries(fields)) {
+    const text = String(value || '');
+    if (PHONE_PATTERN.test(text) || CONTACT_PHRASE_PATTERN.test(text)) return label;
+  }
+  return null;
+}
+
 // Multer config - keep uploaded images in memory; they are streamed to Cloudinary
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -148,6 +162,13 @@ router.put('/:firebaseUid/teacher-profile', requireUser, requireSelf, upload.sin
     const existingProfile = existingUser.teacherProfile || {};
 
     const { name, contactNumber, subjects, classLevels, qualification, experience, feePackages, area, mode, bio } = req.body;
+
+    const fieldWithContact = findContactInfo({ Name: name, Qualification: qualification, Area: area, Bio: bio });
+    if (fieldWithContact) {
+      return res.status(400).json({
+        error: `Please remove the phone number / contact details from "${fieldWithContact}". Students contact you only through Kota Tuition Hub.`,
+      });
+    }
 
     // Build profile object
     const profileData = {
