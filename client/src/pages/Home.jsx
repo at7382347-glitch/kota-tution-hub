@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { apiFetch } from '../api';
+import { publicFetch } from '../api';
 import { resolveTeacherPhotoUrl } from '../utils/teacherPhoto';
 import useReveal from '../hooks/useReveal';
 import Logo from '../components/Logo';
+import VideoIntro from '../components/VideoIntro';
+import { INTRO_VIDEO } from '../media';
 import { FEE_GROUPS, FEE_PACKAGES, GROUP_DISCOUNT, formatINR, groupFee } from '../fees';
 
 const GROUP_DISCOUNT_PCT = Math.round(GROUP_DISCOUNT * 100);
+const SITE_URL = 'https://www.nexvedinstitute.com';
 
 /* ─── Content ─────────────────────────────────────────────────────── */
 
@@ -210,7 +213,7 @@ function Home() {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch('/api/users/teachers')
+    publicFetch('/api/users/teachers')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (cancelled || !Array.isArray(data)) return;
@@ -260,6 +263,20 @@ function Home() {
         />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_IN" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'VideoObject',
+            name: 'Nexved — Kota ke home tutors, 1 minute mein',
+            description:
+              'Coaching ki bheed mein bachcha peeche reh jaata hai. Nexved Kota mein ghar pe interviewed personal tutor dilata hai — free demo class ke saath.',
+            thumbnailUrl: `${SITE_URL}${INTRO_VIDEO.poster}`,
+            contentUrl: `${SITE_URL}${INTRO_VIDEO.src}`,
+            uploadDate: INTRO_VIDEO.uploadDate,
+            duration: INTRO_VIDEO.duration,
+            inLanguage: 'hi-IN',
+          })}
+        </script>
       </Helmet>
 
       <main>
@@ -428,6 +445,9 @@ function Home() {
             ))}
           </dl>
         </section>
+
+        {/* ── 1-minute explainer video ───────────────────────────── */}
+        <VideoIntro />
 
         {/* ── Tutors rail ────────────────────────────────────────── */}
         {railTeachers.length > 0 && (

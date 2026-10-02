@@ -1,12 +1,17 @@
-import { auth } from './firebase';
-
 export const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : import.meta.env.VITE_API_URL;
 
 const ADMIN_TOKEN_KEY = 'adminToken';
 
-// Fetch from the API as the logged-in Firebase user (sends their ID token)
+// Public endpoints (no login) — keeps Firebase out of the Home page bundle
+export function publicFetch(path, options) {
+  return fetch(`${API_BASE}${path}`, options);
+}
+
+// Fetch from the API as the logged-in Firebase user (sends their ID token).
+// Firebase is imported lazily so pages that never log in don't download it.
 export async function apiFetch(path, options = {}) {
   const headers = { ...options.headers };
+  const { auth } = await import('./firebase');
   const token = await auth.currentUser?.getIdToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(`${API_BASE}${path}`, { ...options, headers });

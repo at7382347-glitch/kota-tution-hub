@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { auth } from '../firebase';
 
 /**
  * Wraps a route that requires a logged-in Firebase user.
@@ -14,11 +13,19 @@ function ProtectedRoute({ children }) {
   const location = useLocation();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      setChecking(false);
+    let unsubscribe = () => {};
+    let cancelled = false;
+    import('../firebase').then(({ auth }) => {
+      if (cancelled) return;
+      unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+        setUser(firebaseUser);
+        setChecking(false);
+      });
     });
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   if (checking) {
