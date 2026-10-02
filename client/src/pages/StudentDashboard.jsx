@@ -379,6 +379,30 @@ function StudentDashboard() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Tutor is leaving (notice) or has left — reassure the family */}
+                  {r.tuitionStatus === 'notice' && (
+                    <div className="mt-4 rounded-lg border border-marigold/40 bg-marigold/10 p-4">
+                      <p className="font-body text-sm text-ink">
+                        Your tutor has given notice. Their last class is on{' '}
+                        <span className="font-semibold">
+                          {new Date(r.noticeEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        .
+                      </p>
+                      <p className="font-body text-xs text-ink/60 mt-1">
+                        Don’t worry — our team is already finding a new tutor for you, so classes continue without a gap.
+                      </p>
+                    </div>
+                  )}
+                  {(r.tuitionStatus === 'left_without_notice' || (r.teacherRemoved && r.needsNewTeacher)) && (
+                    <div className="mt-4 rounded-lg border border-maroon/30 bg-maroon/5 p-4">
+                      <p className="font-body text-sm text-ink">This tutor is no longer with Nexved.</p>
+                      <p className="font-body text-xs text-ink/60 mt-1">
+                        Our team will contact you shortly to arrange a new tutor.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

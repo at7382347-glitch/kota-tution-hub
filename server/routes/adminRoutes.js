@@ -3,7 +3,9 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const User = require('../models/User');
+const mongoose = require('mongoose');
 const TuitionRequest = require('../models/TuitionRequest');
+const RemovedTeacher = require('../models/RemovedTeacher');
 const { requireAdmin, signAdminToken } = require('../middleware/auth');
 
 // Max 10 login attempts per IP every 15 minutes
@@ -130,20 +132,107 @@ router.delete('/users/:firebaseUid', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // 2. Delete any associated tuition requests
-    const deleteResult = await TuitionRequest.deleteMany({
-      $or: [
-        { studentFirebaseUid: firebaseUid },
-        { teacherFirebaseUid: firebaseUid }
-      ]
-    });
+    // 2. A student's requests go with them. A teacher's requests stay (they belong to the
+    //    students too) — they are flagged so the admin can assign a new teacher.
+    if (deletedUser.role === 'teacher') {
+      const result = await markTeacherRemoved(firebaseUid);
+      return res.json({
+        message: `Teacher deleted, ${result.modifiedCount} request(s) marked for a new teacher`,
+        deletedRequestsCount: 0,
+      });
+    }
 
+    const deleteResult = await TuitionRequest.deleteMany({ studentFirebaseUid: firebaseUid });
     res.json({
       message: `User deleted, ${deleteResult.deletedCount} requests removed`,
       deletedRequestsCount: deleteResult.deletedCount
     });
   } catch (err) {
     console.error('Delete user error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Flags every request of a removed teacher; running tuitions need a replacement.
+async function markTeacherRemoved(teacherFirebaseUid) {
+  const all = await TuitionRequest.updateMany({ teacherFirebaseUid }, { teacherRemoved: true });
+  await TuitionRequest.updateMany(
+    { teacherFirebaseUid, $or: [{ demoStatus: 'converted' }, { status: 'pending' }] },
+    { needsNewTeacher: true }
+  );
+  return all;
+}
+
+// POST /api/admin/teachers/:firebaseUid/left-without-notice
+// Teacher abandoned a tuition: record the ₹5,000 penalty, delete the account, block re-registration.
+const PENALTY_AMOUNT = 5000;
+
+router.post('/teachers/:firebaseUid/left-without-notice', async (req, res) => {
+  try {
+    const { firebaseUid } = req.params;
+    const { requestId = '', reason = '' } = req.body;
+
+    const teacher = await User.findOne({ firebaseUid, role: 'teacher' }).lean();
+    if (!teacher) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    const record = await RemovedTeacher.create({
+      firebaseUid,
+      name: teacher.name || '',
+      email: (teacher.email || '').toLowerCase(),
+      phone: teacher.phone || '',
+      contactNumber: teacher.teacherProfile?.contactNumber || '',
+      reason: String(reason).slice(0, 300) || 'Left tuition without 15-day notice',
+      requestId: String(requestId),
+      penaltyAmount: PENALTY_AMOUNT,
+    });
+
+    if (requestId && mongoose.isValidObjectId(requestId)) {
+      await TuitionRequest.updateOne(
+        { _id: requestId, teacherFirebaseUid: firebaseUid },
+        { tuitionStatus: 'left_without_notice' }
+      );
+    }
+    const flagged = await markTeacherRemoved(firebaseUid);
+    await User.deleteOne({ firebaseUid });
+
+    console.log(`[admin] Teacher ${firebaseUid} removed for leaving without notice; penalty ₹${PENALTY_AMOUNT}`);
+    res.json({
+      message: `Teacher removed. ₹${PENALTY_AMOUNT} penalty recorded, ${flagged.modifiedCount} request(s) need a new teacher.`,
+      removedTeacher: record,
+    });
+  } catch (err) {
+    console.error('Left-without-notice error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/removed-teachers - Removed teachers and their penalties (newest first)
+router.get('/removed-teachers', async (req, res) => {
+  try {
+    res.json(await RemovedTeacher.find().sort({ removedAt: -1 }).lean());
+  } catch (err) {
+    console.error('Fetch removed teachers error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/removed-teachers/:id/penalty - Mark the penalty paid / unpaid
+router.put('/removed-teachers/:id/penalty', async (req, res) => {
+  try {
+    const { penaltyStatus } = req.body;
+    if (!['paid', 'unpaid'].includes(penaltyStatus)) {
+      return res.status(400).json({ error: 'penaltyStatus must be paid or unpaid' });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+    const record = await RemovedTeacher.findByIdAndUpdate(req.params.id, { penaltyStatus }, { new: true });
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+    res.json(record);
+  } catch (err) {
+    console.error('Update penalty error:', err);
     res.status(500).json({ error: err.message });
   }
 });

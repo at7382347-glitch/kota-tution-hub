@@ -195,6 +195,95 @@ router.put('/:requestId/confirm', requireUser, async (req, res) => {
   }
 });
 
+const NOTICE_DAYS = 15;
+
+// PUT /api/requests/:requestId/notice - Teacher gives 15-day notice on a running tuition
+router.put('/:requestId/notice', requireUser, async (req, res) => {
+  try {
+    const reason = String(req.body.reason || '').trim();
+    if (reason.length < 10) {
+      return res.status(400).json({ error: 'Please write the reason for leaving (at least 10 characters).' });
+    }
+
+    const request = await TuitionRequest.findById(req.params.requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    if (request.teacherFirebaseUid !== req.firebaseUid) {
+      return res.status(403).json({ error: 'Only the tutor of this tuition can give notice.' });
+    }
+    if (request.demoStatus !== 'converted' || (request.tuitionStatus || 'active') !== 'active') {
+      return res.status(400).json({ error: 'Notice can only be given on a running tuition.' });
+    }
+
+    const now = new Date();
+    request.tuitionStatus = 'notice';
+    request.noticeGivenAt = now;
+    request.noticeEndDate = new Date(now.getTime() + NOTICE_DAYS * 24 * 60 * 60 * 1000);
+    request.noticeReason = reason.slice(0, 300);
+    request.noticeCancelledBy = '';
+    request.needsNewTeacher = true;
+
+    const updatedRequest = await request.save();
+    console.log(`[notice] Tutor gave notice on request ${request._id}, last day ${request.noticeEndDate.toISOString()}`);
+    res.json(forViewer(req, updatedRequest));
+  } catch (err) {
+    console.error('Give notice error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/requests/:requestId/notice - Cancel a notice (the tutor of the tuition, or admin)
+router.delete('/:requestId/notice', requireUserOrAdmin, async (req, res) => {
+  try {
+    const request = await TuitionRequest.findById(req.params.requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    if (!req.isAdmin && request.teacherFirebaseUid !== req.firebaseUid) {
+      return res.status(403).json({ error: 'Only the tutor of this tuition or an admin can cancel the notice.' });
+    }
+    if (request.tuitionStatus !== 'notice') {
+      return res.status(400).json({ error: 'There is no active notice on this tuition.' });
+    }
+
+    request.tuitionStatus = 'active';
+    request.noticeGivenAt = undefined;
+    request.noticeEndDate = undefined;
+    request.noticeReason = '';
+    request.noticeCancelledBy = req.isAdmin ? 'admin' : 'teacher';
+    request.needsNewTeacher = false;
+
+    const updatedRequest = await request.save();
+    res.json(forViewer(req, updatedRequest));
+  } catch (err) {
+    console.error('Cancel notice error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/requests/:requestId/tuition-status - Admin closes a tuition after the notice period
+router.put('/:requestId/tuition-status', requireAdmin, async (req, res) => {
+  try {
+    const { tuitionStatus, needsNewTeacher } = req.body;
+    const request = await TuitionRequest.findById(req.params.requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    if (tuitionStatus !== undefined) {
+      if (!['active', 'ended'].includes(tuitionStatus)) {
+        return res.status(400).json({ error: 'tuitionStatus can only be set to active or ended here.' });
+      }
+      request.tuitionStatus = tuitionStatus;
+    }
+    if (needsNewTeacher !== undefined) request.needsNewTeacher = !!needsNewTeacher;
+    res.json(await request.save());
+  } catch (err) {
+    console.error('Update tuition status error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/requests/:requestId/payment - Update fee, commission, and payment status (Admin only)
 router.put('/:requestId/payment', requireAdmin, async (req, res) => {
   try {

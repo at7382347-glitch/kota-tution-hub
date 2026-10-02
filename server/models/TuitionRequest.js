@@ -95,6 +95,20 @@ const tuitionRequestSchema = new mongoose.Schema({
     enum: ["unpaid", "paid"],
     default: "unpaid"
   },
+  // Lifecycle of a converted tuition: running → teacher gives 15-day notice → ended,
+  // or the teacher leaves without notice (penalty + removal).
+  tuitionStatus: {
+    type: String,
+    enum: ['active', 'notice', 'ended', 'left_without_notice'],
+    default: 'active',
+  },
+  noticeGivenAt: { type: Date },
+  noticeEndDate: { type: Date },
+  noticeReason: { type: String, default: '' },
+  noticeCancelledBy: { type: String, enum: ['', 'teacher', 'admin'], default: '' },
+  // Set when the teacher leaves or is removed — admin must assign a replacement
+  needsNewTeacher: { type: Boolean, default: false },
+  teacherRemoved: { type: Boolean, default: false },
   createdAt: {
     type: Date,
     default: Date.now,

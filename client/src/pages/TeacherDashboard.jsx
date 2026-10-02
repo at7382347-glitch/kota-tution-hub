@@ -8,6 +8,13 @@ import { API_BASE, apiFetch } from '../api';
 const SUBJECT_OPTIONS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English'];
 const CLASS_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'Dropper'];
 const MODE_OPTIONS = ['offline', 'both'];
+const NOTICE_DAYS = 15;
+
+const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+// Whole days from now until `d` (never negative)
+const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
 
 
 const initialForm = {
@@ -33,6 +40,11 @@ function TeacherDashboard() {
   const [message, setMessage] = useState({ text: '', type: '' });
   const [requests, setRequests] = useState([]);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [noticeFormId, setNoticeFormId] = useState(null);
+  const [noticeReason, setNoticeReason] = useState('');
+  const [noticeAgree, setNoticeAgree] = useState(false);
+  const [noticeBusy, setNoticeBusy] = useState(false);
+  const [noticeLastDay, setNoticeLastDay] = useState(null);
   const [viewedIds, setViewedIds] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('teacherViewedRequests') || '[]');
@@ -254,6 +266,42 @@ function TeacherDashboard() {
     }
   };
 
+  // 15-day notice on a running tuition
+  const giveNotice = async (requestId) => {
+    setNoticeBusy(true);
+    try {
+      const res = await apiFetch(`/api/requests/${requestId}/notice`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: noticeReason.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to submit notice');
+      setRequests((prev) => prev.map((r) => (r._id === requestId ? data : r)));
+      setNoticeFormId(null);
+      setMessage({ text: `Notice submitted. Your last class is on ${formatDate(data.noticeEndDate)}.`, type: 'success' });
+    } catch (err) {
+      setMessage({ text: err.message, type: 'error' });
+    } finally {
+      setNoticeBusy(false);
+    }
+  };
+
+  const cancelNotice = async (requestId) => {
+    setNoticeBusy(true);
+    try {
+      const res = await apiFetch(`/api/requests/${requestId}/notice`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel notice');
+      setRequests((prev) => prev.map((r) => (r._id === requestId ? data : r)));
+      setMessage({ text: 'Notice cancelled. Thank you for continuing!', type: 'success' });
+    } catch (err) {
+      setMessage({ text: err.message, type: 'error' });
+    } finally {
+      setNoticeBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-sandstone">
@@ -283,6 +331,7 @@ function TeacherDashboard() {
 
   const profile = user.teacherProfile;
   const isComplete = profile?.isProfileComplete;
+  const activeTuitions = requests.filter((r) => r.demoStatus === 'converted' && !r.teacherRemoved);
 
   return (
     <div className="min-h-screen bg-sandstone py-8 px-4">
@@ -423,6 +472,123 @@ function TeacherDashboard() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Active Tuitions — running tuitions, with the 15-day notice flow */}
+        {isComplete && !showForm && activeTuitions.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-ink/8 p-5 sm:p-8 mt-6">
+            <h2 className="font-display text-ink text-lg sm:text-xl font-semibold">Active Tuitions</h2>
+            <p className="font-body text-xs text-ink/50 mt-1 mb-6">
+              Leaving a tuition requires {NOTICE_DAYS} days’ notice. Leaving without notice means a ₹5,000 penalty and removal from Nexved.
+            </p>
+            <div className="space-y-4">
+              {activeTuitions.map((req) => {
+                const status = req.tuitionStatus || 'active';
+                return (
+                  <div key={req._id} className="border border-ink/8 rounded-xl p-5 bg-sandstone/50">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-body text-sm font-medium text-ink">Student: {req.studentName || 'Unknown'}</p>
+                        <p className="font-body text-xs text-ink/50 mt-1">
+                          {req.subject || 'N/A'} · Class {req.classLevel || '—'} · {req.area || 'Kota'}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold font-body ${
+                          status === 'notice' ? 'bg-marigold/20 text-ink' : status === 'ended' ? 'bg-ink/10 text-ink/60' : 'bg-sage/15 text-sage'
+                        }`}
+                      >
+                        {status === 'notice' ? 'Notice period' : status === 'ended' ? 'Ended' : 'Running'}
+                      </span>
+                    </div>
+
+                    {status === 'notice' && (
+                      <div className="mt-4 rounded-lg border border-marigold/40 bg-marigold/10 p-4">
+                        <p className="font-body text-sm text-ink">
+                          Notice given on {formatDate(req.noticeGivenAt)}. Last class:{' '}
+                          <span className="font-semibold">{formatDate(req.noticeEndDate)}</span>{' '}
+                          ({daysLeft(req.noticeEndDate)} day{daysLeft(req.noticeEndDate) === 1 ? '' : 's'} left).
+                        </p>
+                        <p className="font-body text-xs text-ink/60 mt-1">Please keep teaching until the last day.</p>
+                        <button
+                          type="button"
+                          disabled={noticeBusy}
+                          onClick={() => cancelNotice(req._id)}
+                          className="mt-3 px-4 py-2 rounded-lg border border-ink/15 bg-white text-sm font-medium text-ink hover:bg-ink/5 disabled:opacity-50 cursor-pointer font-body"
+                        >
+                          Cancel notice — I’ll continue teaching
+                        </button>
+                      </div>
+                    )}
+
+                    {status === 'active' && noticeFormId !== req._id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNoticeFormId(req._id);
+                          setNoticeLastDay(new Date(Date.now() + NOTICE_DAYS * 86400000));
+                          setNoticeReason('');
+                          setNoticeAgree(false);
+                        }}
+                        className="mt-4 text-sm font-medium text-maroon hover:text-maroon/80 underline underline-offset-4 cursor-pointer font-body"
+                      >
+                        Need to leave this tuition? Give {NOTICE_DAYS}-day notice
+                      </button>
+                    )}
+
+                    {status === 'active' && noticeFormId === req._id && (
+                      <div className="mt-4 bg-white p-4 rounded-lg border border-ink/10 shadow-sm space-y-3">
+                        <label htmlFor={`notice-${req._id}`} className="block font-body text-sm font-medium text-ink">
+                          Why are you leaving? <span className="text-maroon">*</span>
+                        </label>
+                        <textarea
+                          id={`notice-${req._id}`}
+                          rows={3}
+                          maxLength={300}
+                          value={noticeReason}
+                          onChange={(e) => setNoticeReason(e.target.value)}
+                          placeholder="e.g. Moving out of Kota next month"
+                          className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-marigold resize-none"
+                        />
+                        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={noticeAgree}
+                            onChange={(e) => setNoticeAgree(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 accent-[#9B3922] cursor-pointer"
+                          />
+                          <span className="font-body text-xs text-ink/70 leading-relaxed">
+                            I will keep teaching for the next {NOTICE_DAYS} days, until my last class on{' '}
+                            <span className="font-semibold">{formatDate(noticeLastDay)}</span>.
+                          </span>
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            type="button"
+                            disabled={noticeBusy || noticeReason.trim().length < 10 || !noticeAgree}
+                            onClick={() => giveNotice(req._id)}
+                            className="px-5 py-2.5 bg-maroon text-white text-sm font-semibold rounded-lg hover:bg-maroon/90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-body"
+                          >
+                            {noticeBusy ? 'Submitting…' : 'Submit notice'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNoticeFormId(null)}
+                            className="px-5 py-2.5 bg-ink/10 text-ink text-sm font-medium rounded-lg hover:bg-ink/15 cursor-pointer font-body"
+                          >
+                            Keep teaching
+                          </button>
+                        </div>
+                        {noticeReason.trim().length > 0 && noticeReason.trim().length < 10 && (
+                          <p className="font-body text-xs text-maroon">Please write at least 10 characters.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

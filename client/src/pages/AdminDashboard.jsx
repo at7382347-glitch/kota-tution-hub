@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 
 import { API_BASE, adminFetch, getAdminToken, setAdminToken } from '../api';
 import { packageLabel } from '../fees';
+import NoticesTab from '../components/admin/NoticesTab';
 
 
 function AdminDashboard() {
@@ -12,6 +13,7 @@ function AdminDashboard() {
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [activeTab, setActiveTab] = useState('requests');
+  const [removedTeachers, setRemovedTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -30,11 +32,12 @@ function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, reqsRes, teachersRes, studentsRes] = await Promise.all([
+      const [statsRes, reqsRes, teachersRes, studentsRes, removedRes] = await Promise.all([
         adminFetch(`/api/admin/stats`),
         adminFetch(`/api/requests`),
         adminFetch(`/api/admin/teachers`),
         adminFetch(`/api/users/students`),
+        adminFetch(`/api/admin/removed-teachers`),
       ]);
 
       if (!statsRes.ok || !reqsRes.ok) {
@@ -45,11 +48,13 @@ function AdminDashboard() {
       const reqsData = await reqsRes.json();
       const teachersData = teachersRes.ok ? await teachersRes.json() : [];
       const studentsData = studentsRes.ok ? await studentsRes.json() : [];
+      const removedData = removedRes.ok ? await removedRes.json() : [];
 
       setStats(statsData);
       setRequests(reqsData);
       setTeachers(teachersData);
       setStudents(studentsData);
+      setRemovedTeachers(removedData);
     } catch (err) {
       console.error('Admin fetch error:', err);
       setError('Failed to load admin dashboard data.');
@@ -250,6 +255,11 @@ function AdminDashboard() {
             { key: 'requests', label: 'Requests', count: requests.length },
             { key: 'teachers', label: 'Teachers', count: teachers.length },
             { key: 'students', label: 'Students', count: students.length },
+            {
+              key: 'notices',
+              label: 'Notices',
+              count: requests.filter((r) => r.tuitionStatus === 'notice' || r.needsNewTeacher).length,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -269,6 +279,11 @@ function AdminDashboard() {
             </button>
           ))}
         </div>
+
+        {/* ═══ TAB: Notices (15-day notice, replacements, removed tutors) ═══ */}
+        {activeTab === 'notices' && (
+          <NoticesTab requests={requests} removedTeachers={removedTeachers} onChanged={fetchData} />
+        )}
 
         {/* ═══ TAB: Requests ═══ */}
         {activeTab === 'requests' && (

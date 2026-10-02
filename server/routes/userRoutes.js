@@ -5,6 +5,7 @@ const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const User = require('../models/User');
 const TuitionRequest = require('../models/TuitionRequest');
+const RemovedTeacher = require('../models/RemovedTeacher');
 const { requireUser, requireAdmin, requireUserOrAdmin, requireSelf } = require('../middleware/auth');
 const { perStudentFeeFor } = require('../config/fees');
 
@@ -82,6 +83,16 @@ router.post('/sync', requireUser, async (req, res) => {
 
     if (!['student', 'teacher'].includes(role)) {
       return res.status(400).json({ error: 'A valid role (student or teacher) is required.' });
+    }
+
+    // Teachers removed for leaving without notice may not register again (same account, email or phone)
+    const blockedBy = [{ firebaseUid }];
+    if (email) blockedBy.push({ email: String(email).toLowerCase() });
+    if (phone) blockedBy.push({ phone }, { contactNumber: String(phone).replace(/^\+91/, '') });
+    if (await RemovedTeacher.exists({ $or: blockedBy })) {
+      return res.status(403).json({
+        error: 'This account has been removed from Nexved. Please contact the Nexved team for help.',
+      });
     }
 
     const user = await User.create({ firebaseUid, name, email, phone, photoURL, role });
