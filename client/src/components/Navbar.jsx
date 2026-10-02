@@ -29,7 +29,7 @@ function Navbar() {
       }`}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" aria-label="Nexve — Kota Tuition Hub home">
+        <Link to="/" aria-label="Nexved — Kota Tuition Hub home">
           <Logo />
         </Link>
 

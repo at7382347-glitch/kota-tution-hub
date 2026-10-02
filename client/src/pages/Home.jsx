@@ -248,12 +248,12 @@ function Home() {
   return (
     <div className="overflow-x-hidden bg-sandstone">
       <Helmet>
-        <title>Home Tutors in Kota for JEE, NEET &amp; Boards | Nexve — Kota Tuition Hub</title>
+        <title>Home Tutors in Kota for JEE, NEET &amp; Boards | Nexved — Kota Tuition Hub</title>
         <meta
           name="description"
           content="Interviewed home tutors across Kota, Rajasthan for Class 6–12, JEE, NEET and droppers. Free demo class at home. Fees collected monthly at your doorstep."
         />
-        <meta property="og:title" content="Home Tutors in Kota for JEE, NEET & Boards | Nexve — Kota Tuition Hub" />
+        <meta property="og:title" content="Home Tutors in Kota for JEE, NEET & Boards | Nexved — Kota Tuition Hub" />
         <meta
           property="og:description"
           content="Interviewed home tutors across Kota for Class 6–12, JEE, NEET and droppers. Free demo class at home."
@@ -366,7 +366,7 @@ function Home() {
                 <div className="relative rounded-[1.75rem] bg-ink p-5 shadow-[0_30px_60px_-30px_rgba(31,42,68,0.6)] sm:p-6">
                   <div className="mb-5 flex items-center justify-between">
                     <p className="font-body text-xs font-semibold uppercase tracking-[0.18em] text-sandstone/50">
-                      Tutors on Nexve
+                      Tutors on Nexved
                     </p>
                     <span className="flex items-center gap-2 font-body text-xs text-sandstone/60">
                       <span className="relative flex h-2 w-2">
@@ -729,7 +729,7 @@ function Home() {
             </div>
           </div>
           <div className="mt-14 flex flex-col gap-2 border-t border-ink/10 pt-6 font-body text-xs text-ink/45 sm:flex-row sm:justify-between">
-            <p>© {new Date().getFullYear()} Nexve · Kota Tuition Hub</p>
+            <p>© {new Date().getFullYear()} Nexved · Kota Tuition Hub</p>
             <p>Founded by Ankur Yadav &amp; Sanskar Thakur</p>
           </div>
         </div>

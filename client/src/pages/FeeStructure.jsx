@@ -8,7 +8,7 @@ function FeeStructure() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-sandstone px-4 py-10 sm:px-6 sm:py-14">
       <Helmet>
-        <title>Fee Structure | Nexve — Kota Tuition Hub</title>
+        <title>Fee Structure | Nexved — Kota Tuition Hub</title>
         <meta
           name="description"
           content="Home tuition fees in Kota for Class 6 to 12, JEE, NEET and droppers. One hour a day at home. Group tuition: 40% off for each student."

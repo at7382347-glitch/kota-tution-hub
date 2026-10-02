@@ -1,4 +1,4 @@
-// Nexve brand mark: an "N" whose rising diagonal is a single marigold stroke —
+// Nexved brand mark: an "N" whose rising diagonal is a single marigold stroke —
 // the path from where a student is to where they want to be.
 export function LogoMark({ className = 'h-9 w-9' }) {
   return (
@@ -17,7 +17,7 @@ function Logo({ light = false, className = '' }) {
       <LogoMark />
       <span className="flex flex-col leading-none">
         <span className={`font-display text-[1.45rem] font-bold tracking-tight ${light ? 'text-sandstone' : 'text-ink'}`}>
-          nexve<span className="text-marigold">.</span>
+          nexved<span className="text-marigold">.</span>
         </span>
         <span className={`mt-1 font-body text-[0.6rem] font-semibold uppercase tracking-[0.2em] ${light ? 'text-sandstone/50' : 'text-ink/45'}`}>
           Kota Tuition Hub
