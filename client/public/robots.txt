@@ -5,4 +5,4 @@ Disallow: /student/dashboard
 Disallow: /admin/login
 Disallow: /admin/dashboard
 
-Sitemap: https://kotatuitionhub.com/sitemap.xml
+Sitemap: https://www.nexvedinstitute.com/sitemap.xml
